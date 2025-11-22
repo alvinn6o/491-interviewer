@@ -72,3 +72,11 @@ model VerificationToken {
 
     @@unique([identifier, token])
 }
+
+// Demo model for showcasing database save/retrieve - no auth required
+model DemoMessage {
+    id        Int      @id @default(autoincrement())
+    author    String
+    message   String
+    createdAt DateTime @default(now())
+}
