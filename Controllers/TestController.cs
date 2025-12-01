@@ -20,5 +20,7 @@ public class TestController : Controller
     public IActionResult DevHelp()
     {
         return View("Adding New Views");
+        //If we wanted a sub folder we would write the full path
+        //IE View("example/Adding New Views") would search for Views/Test/example/Adding New Views.cs
     }
 }
