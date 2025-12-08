@@ -1,0 +1,14 @@
+﻿.row {
+    display: flex; /* Enables flexbox */
+    flex-direction: row; /* Default: items appear side-by-side */
+    gap: 10px; /* Optional spacing */
+    align-items: center;
+}
+
+.column {
+    display: flex;
+    flex-direction: column; /* Stacks items vertically */
+    gap: 10px;
+    align-items: center;
+}
+
