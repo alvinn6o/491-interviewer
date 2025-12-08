@@ -48,4 +48,10 @@ yarn-error.log*
 # idea files
 .idea
 
+#visual studio project files
 .vs
+*.csproj
+*.sln
+Properties
+bin
+obj
