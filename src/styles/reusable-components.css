@@ -1,0 +1,7 @@
+﻿@import "tailwindcss";
+
+@layer components {
+    .orange_button {
+        @apply bg-orange-500 rounded p-1 text-white;
+    }
+}

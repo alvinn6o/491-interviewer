@@ -1,12 +1,11 @@
 @import "tailwindcss";
+@import "./site-styling.css";
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-@layer components {
-    .orange_button {
-        @apply bg-orange-500 rounded p-1 text-white;
-    }
-}
+
+
+

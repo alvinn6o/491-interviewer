@@ -1,0 +1,17 @@
+﻿@import "tailwindcss";
+
+
+h1 {
+    font-size: 25px;
+    font-weight: bold;
+}
+
+.description {
+    font-size: 15px;
+    color: gray;
+}
+
+.sub_description {
+    font-size: 12px;
+    color: gray;
+}
