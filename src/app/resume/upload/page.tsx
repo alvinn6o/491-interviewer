@@ -1,6 +1,8 @@
 ﻿"use client";
-import styles from "./test.module.css"
-import { createContext, useState } from "react";
+import { useState } from "react";
+import styles from "./test.module.css";
+import React from "react";
+import type { ReactNode } from "react";
 
 export default function ResumeUpload() {
 
@@ -132,15 +134,78 @@ function ViewFeedbackBox({ changeState }: { changeState: React.Dispatch<React.Se
     };
 
     return (
-        <div style={{ outline: '2px solid black', width: '50%' }} className={`${styles.centered_column} rounded`}>
-            <div></div>
-            <h2>View Feedback</h2>
-            <div className={styles.horizontal_line}></div>
-            <img src="/favicon.ico" alt="icon" width="100" />
-            <button className="orange_button" onClick={ViewFeedbackBoxButton}>Close Feedback</button>
-            <p className="sub-description">.pdf or .docx file</p>
+        <div className={`${styles.centered_column} rounded_box w-3/4`}>
+            <FeedbackSection>
+                <MatchScore onClick={ViewFeedbackBoxButton} />
+                <div>
+                    <h3>ATS Matching</h3>
+                    <CheckList/>
+                </div>
+            </FeedbackSection>
+
+            <FeedbackSection>
+                <div>
+                    <h3>Skills Match</h3>
+                    <CheckList />
+                </div>
+                <div>
+                    <h3>Formatting</h3>
+                    <CheckList />
+                </div>
+            </FeedbackSection>
+
+            <FeedbackSection>
+                <div>
+                    <h3>Recruiter Tips</h3>
+                    <CheckList />
+                </div>
+                <div>
+                    <h3>Keywords</h3>
+                    <CheckList />
+                </div>
+            </FeedbackSection>
         </div>
-    )
+    );
 
 }
 
+function FeedbackSection({ children }: { children: ReactNode }) {
+    const [left, right] = React.Children.toArray(children);
+
+    return (
+        <span className="flex w-full p-2 gap-2">
+            <div className="flex flex-col rounded_box w-1/2">
+                {left}
+            </div>
+            <div className="flex flex-col rounded_box w-1/2">
+                {right}
+            </div>
+        </span>
+    )
+}
+
+function MatchScore({ onClick }: { onClick: () => void }) {
+    return (
+        <div className="p-2 flex flex-col justify-between h-64 items-center">
+            <h3>Match Score</h3>
+            <img src="/favicon.ico" alt="icon" width="100" />
+            <button className="orange_button" onClick={onClick}>Upload and Rescan</button>
+        </div>
+    );
+}
+
+function CheckList() {
+    
+    return (    
+        <div className="grid grid-cols-[1fr_1fr_10fr] gap-4 p-5">
+            {[...Array(5)].map((_, i) => (
+                <>
+                    <div key={`num-${i}`} className="text-center">{i + 1}</div>
+                    <div key={`check-${i}`} className="text-center">✅</div>
+                    <div key={`desc-${i}`} className="text-left">Lorum Ipsum Description!</div>
+                </>
+            ))}
+        </div>
+    );
+
+}

@@ -17,15 +17,14 @@
     gap: 50px;
 }
 
+.centered_row2 {
+    @apply flex flex-row items-center;
+    gap: 10px;
+}
+
 .centered_column {
     @apply flex flex-col items-center;
     gap: 20px;
 }
 
-.horizontal_line {
-    border-top: 2px solid #000; /* Creates the solid line */
-    height: 0; /* Ensures the div itself has no height other than the border */
-    margin: 1px; /* Adds vertical spacing */
-    width: 100%; /* Spans the full width of its parent container */
-}
 
