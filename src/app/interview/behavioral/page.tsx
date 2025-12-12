@@ -80,7 +80,7 @@ function OnFailedEndInterview() {
 
 export default function BehavioralInterview() {
 
-    return (
+   return (
 
         <main className={styles.centered_column}>
             <h1>Behavioral Interview Session</h1>
@@ -96,6 +96,7 @@ export default function BehavioralInterview() {
 
     )
 }
+
 
 enum BIPageState {
     START,
@@ -142,7 +143,7 @@ function BIStart({ changeState } : { changeState: React.Dispatch<React.SetStateA
     };
 
     return (
-        <div>
+        <div className={`${styles.centered_column} w-full`}>
             <CameraBox />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
@@ -171,7 +172,7 @@ function BIActive({ changeState, changeFeedbackData }: {
     };
 
     return (
-        <div>
+        <div className={`${styles.centered_column} w-full`}>
             <CameraBox />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
         </div>
@@ -187,17 +188,90 @@ function BIEnd({ changeState, data }: {
         changeState(BIPageState.START);
     };
 
+    const DataDisplay = ({ data }: { data: FeedbackItem[] }) => {
+
+        const notes = data.filter(item => item.key === FeedbackCategory.NOTES);
+        const otherData = data.filter(item => item.key !== FeedbackCategory.NOTES);
+
+        const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
+
+            return (
+                <div className="outline-2 rounded w-full">
+                    <h2>{title}</h2>
+                    <hr/>
+                    {children}
+                </div>
+            )
+        };
+
+        const FeedbackList = ({ data }: { data: FeedbackItem[] }) => {
+
+            const splitFeedback = (data: FeedbackItem[]) => {
+                const middle = Math.ceil(data.length / 2); // rounds up if odd
+                const firstHalf = data.slice(0, middle);
+                const secondHalf = data.slice(middle);
+
+                return [firstHalf, secondHalf];
+            };
+
+            const [firstHalf, secondHalf] = splitFeedback(data);
+
+            return (
+                <div className="flex flex-row gap-4 p-2">
+                    <div className="flex flex-col">
+                        {firstHalf?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <h3>{item.key}</h3>
+                                    <span>{item.score.toString()}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        {secondHalf?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <h3>{item.key}</h3>
+                                    <span>{item.score.toString()}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                </div>
+            );
+
+        };
+
+        return (
+            <div className="w-3/4 flex flex-row gap-4">
+                <DisplayBox title="Notes">
+                    {notes[0]?.content}
+                </DisplayBox>
+
+                <DisplayBox title="Statistics">
+                    <FeedbackList data={otherData}/>
+                </DisplayBox>
+            </div>
+        );
+    };
+
     return (
-        <div>
+        <div className={`${styles.centered_column} w-full`}>
             <RecordedVideoBox />
             <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
+            <DataDisplay data={data}/>
         </div>
     );
+
 }
 
 function CameraBox() {
     return (
-        <div className="outline-2 rounded w-1/2 h-1/2">
+        <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
+            <img src="./favicon.ico" style={{ height: "200px" }} />
             Camera not implemented.
         </div>
     );
@@ -205,8 +279,9 @@ function CameraBox() {
 
 function RecordedVideoBox() {
     return (
-        <div className="outline-2 rounded w-1/2 h-1/2">
-            Video playback not implemented.
+        <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
+            <img src="./favicon.ico" style={{ height: "200px" }} />
+            Video Playback not implemented.
         </div>
     );
 }

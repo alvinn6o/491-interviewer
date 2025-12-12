@@ -60,7 +60,7 @@ async function OnAddJobDescriptionClicked(job_desc: string): Promise<FeedbackIte
 
     //test data in place of actual response
     const test_items = [
-        { key: FeedbackCategory.MATCH_SCORE, name: null, description: "50%", status: null },
+        { key: FeedbackCategory.MATCH_SCORE, name: "none", description: "50%", status: true },
 
         { key: FeedbackCategory.ATS_SCORE, name: "Item 1", description: "ATS_SCORE Lorem Ipsum 1", status: true },
         { key: FeedbackCategory.ATS_SCORE, name: "Item 2", description: "ATS_SCORE Lorem Ipsum 2", status: false },
