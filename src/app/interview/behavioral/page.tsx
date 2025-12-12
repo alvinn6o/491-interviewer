@@ -1,10 +1,212 @@
-﻿export default function BehavioralInterview()
-{
+﻿//Author: Brandon Christian
+//Date: 12/12/2025
+
+
+"use client";
+import { useState } from "react";
+import styles from "./test.module.css";
+import React from "react";
+import type { ReactNode } from "react";
+
+//-------------------------------------
+//  Functionality
+//-------------------------------------
+
+async function OnStartInterviewClicked(): Promise<string> {
+
+    //TODO:
+    //Establish connection to server
+    //Begin camera and audio feed
+
+    //return stub promise
+    return new Promise((resolve) => {
+        setTimeout(() => resolve("Connection successful!"), 10);
+    });
+};
+
+function OnFailedStartInterview() {
+    console.log("Faled Upload");
+}
+
+
+
+enum FeedbackCategory {
+    NONE = "None",
+    NOTES = "Notes",
+    EYE_CONTACT = "Eye Contact",
+    CONFIDENCE = "Confidence",
+    QUALITY_OF_ANSWERS = "Quality of Answers",
+    SOCIABILITY = "Sociability",
+    CLEAR_SPEECH = "Clear Speech"
+
+}
+
+type FeedbackItem = {
+    key: FeedbackCategory,
+    content: string,
+    score: number
+}
+
+async function OnEndInterviewClicked(): Promise<FeedbackItem[]> {
+
+    //TODO:
+    //Request analysis and receive feedback
+
+    //test items in place of actual data
+    const test_items = [
+        { key: FeedbackCategory.NOTES, content: "Example paragraph. This is where you will see a description of your interview.", score : 1 },
+        { key: FeedbackCategory.EYE_CONTACT, content: "", score : 1 },
+        { key: FeedbackCategory.CONFIDENCE, content: "", score : 2 },
+        { key: FeedbackCategory.QUALITY_OF_ANSWERS, content: "", score : 3 },
+        { key: FeedbackCategory.SOCIABILITY, content: "", score : 4 },
+        { key: FeedbackCategory.CLEAR_SPEECH, content: "", score : 5 },
+
+    ];
+
+    //return stub promise
+    return new Promise((resolve) => {
+        setTimeout(() => resolve(test_items), 10);
+    });
+};
+
+function OnFailedEndInterview() {
+    console.log("Faled Upload");
+}
+
+//-------------------------------------
+//  View
+//-------------------------------------
+
+
+export default function BehavioralInterview() {
+
     return (
 
-        <div>
-            Behavioral Interview Page
-        </div>
+        <main className={styles.centered_column}>
+            <h1>Behavioral Interview Session</h1>
+            <p className="description">
+                Simulate an authentic interview experience.
+                Your responses will be evaluated for clairty, tone, and professionalism in
+                real time.
+            </p>
+            <ViewSwitcher />
+            <br />
+        </main>
+
 
     )
+}
+
+enum BIPageState {
+    START,
+    ACTIVE,
+    END
+}
+
+function ViewSwitcher() {
+
+    const [pageState, setPageState] = useState(BIPageState.START);
+
+    //Helps set useState typing
+    const test_items = [
+        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1}
+    ];
+
+    const [feedbackData, setFeedbackData] = useState(test_items);
+
+    switch (pageState) {
+        case BIPageState.START:
+            return (<BIStart changeState={setPageState} />);
+
+        case BIPageState.ACTIVE:
+            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} />);
+
+        case BIPageState.END:
+            return (<BIEnd changeState={setPageState} data={feedbackData} />);
+    }
+}
+
+function BIStart({ changeState } : { changeState: React.Dispatch<React.SetStateAction<BIPageState>> }) {
+
+    const StartInterviewButton = async () => {
+        try {
+            //Try and Wait For Upload
+            const result = await OnStartInterviewClicked();
+            console.log(result);
+
+            //Change state if successful
+            changeState(BIPageState.ACTIVE);
+        } catch (error) {
+            OnFailedStartInterview();
+        }
+    };
+
+    return (
+        <div>
+            <CameraBox />
+            <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
+        </div>
+    );
+}
+
+function BIActive({ changeState, changeFeedbackData }: {
+    changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
+    changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
+}) {
+
+
+    const EndInterviewButton = async () => {
+        try {
+            //Try and Wait For Upload
+            const result = await OnEndInterviewClicked();
+
+            //store data in useState
+            changeFeedbackData(result);
+
+            //Change state if successful
+            changeState(BIPageState.END);
+        } catch (error) {
+            OnFailedEndInterview();
+        }
+    };
+
+    return (
+        <div>
+            <CameraBox />
+            <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
+        </div>
+    );
+}
+
+function BIEnd({ changeState, data }: {
+    changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
+    data: FeedbackItem[];
+}) {
+
+    const RestartInterviewButton = async () => {
+        changeState(BIPageState.START);
+    };
+
+    return (
+        <div>
+            <RecordedVideoBox />
+            <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
+        </div>
+    );
+}
+
+function CameraBox() {
+    return (
+        <div className="outline-2 rounded w-1/2 h-1/2">
+            Camera not implemented.
+        </div>
+    );
+}
+
+function RecordedVideoBox() {
+    return (
+        <div className="outline-2 rounded w-1/2 h-1/2">
+            Video playback not implemented.
+        </div>
+    );
 }
