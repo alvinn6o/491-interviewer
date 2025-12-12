@@ -1,18 +1,4 @@
-﻿.row {
-    display: flex; /* Enables flexbox */
-    flex-direction: row; /* Default: items appear side-by-side */
-    gap: 10px; /* Optional spacing */
-    align-items: center;
-}
-
-.column {
-    display: flex;
-    flex-direction: column; /* Stacks items vertically */
-    gap: 10px;
-    align-items: center;
-}
-
-.centered_row {
+﻿.centered_row {
     @apply flex flex-row items-center;
     gap: 50px;
 }
@@ -25,6 +11,17 @@
 .centered_column {
     @apply flex flex-col items-center;
     gap: 20px;
+}
+
+.circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%; /* This makes the square a circle */
+
+    display: flex;
+    justify-content: center;  /* horizontal center */
+    align-items: center;      /* vertical center */
+    font-size: 32px;
 }
 
 

@@ -144,21 +144,31 @@ function ViewSwitcher() {
 
 function Instructions() {
 
-    const NumberCircle = ({ number, description }: { number: string; description: string}) => {
+    const NumberCircle = ({ number, description }: { number: string; description: string }) => {
         return (
-            <div className={styles.centered_column}>
-                <div>{number}</div>
+            <div className={`${styles.centered_column}`}>
+                <div className={`${styles.circle} outline-2`}>
+                    {number}
+                </div>
                 <p className="sub-description">{description}</p>
             </div>
         );
     }
 
     return (
-        <div className={styles.centered_row} >
+        <div className={`${styles.centered_row} align-middle`} >
             <NumberCircle number="1" description="Upload Resume" />
-            <img src="/favicon.ico" alt="icon" />
+
+            <span className={`${styles.centered_column}`}>
+                <h1>→</h1> 
+                <div></div> 
+            </span>
+            
             <NumberCircle number="2" description="Add Job Description" />
-            <img src="/favicon.ico" alt="icon" />
+            <span className={`${styles.centered_column}`}>
+                <h1>→</h1>
+                <div></div>
+            </span>
             <NumberCircle number="3" description="Get Feedback" />
         </div>
     )
