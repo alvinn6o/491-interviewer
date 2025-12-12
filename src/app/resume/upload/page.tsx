@@ -26,6 +26,7 @@ async function OnUploadResumeClicked(): Promise<string>  {
 };
 
 function OnFailedUpload() {
+    //Used for failed upload of resume and job description
     console.log("Faled Upload");
 }
 
