@@ -35,7 +35,8 @@ enum FeedbackCategory {
     SKILLS_MATCH = "skills_match",
     FORMATTING = "formatting",
     RECRUITER_TIPS = "recruiter_tips",
-    KEYWORDS = "keywords"
+    KEYWORDS = "keywords",
+    MATCH_SCORE = "match_score"
 }
 
 type FeedbackItem = {
@@ -58,6 +59,8 @@ async function OnAddJobDescriptionClicked(job_desc: string): Promise<FeedbackIte
 
     //test data in place of actual response
     const test_items = [
+        { key: FeedbackCategory.MATCH_SCORE, name: null, description: "50%", status: null },
+
         { key: FeedbackCategory.ATS_SCORE, name: "Item 1", description: "ATS_SCORE Lorem Ipsum 1", status: true },
         { key: FeedbackCategory.ATS_SCORE, name: "Item 2", description: "ATS_SCORE Lorem Ipsum 2", status: false },
         { key: FeedbackCategory.ATS_SCORE, name: "Item 3", description: "ATS_SCORE Lorem Ipsum 3", status: true },
@@ -193,7 +196,7 @@ function UploadBox({ changeState }: { changeState: React.Dispatch<React.SetState
         <div style={{ width: '50%' }} className={`${styles.centered_column} rounded outline-2`}>
             <br />
             <h2>Upload Your Resume</h2>
-            <img src="/favicon.ico" alt="icon" width = "100"/>
+            <h1>↑</h1>
             <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
             <p className="sub-description">.pdf or .docx file</p>
         </div>
@@ -314,9 +317,9 @@ function ViewFeedbackBox({ changeState, data } : {
     return (
         <div className={`${styles.centered_column} rounded_box w-3/4`}>
             <FeedbackSection>
-                <MatchScore onClick={ViewFeedbackBoxButton} />
+                <MatchScore onClick={ViewFeedbackBoxButton} items={data} />
                 <div>
-                    <VFTitle title="ATS Score" importance="Medium" />
+                    <VFTitle title="ATS Score" importance="Medium"/>
                     <hr className="border-t-2" />
                     <CheckList items={data} type={FeedbackCategory.ATS_SCORE} />
                 </div>
@@ -353,11 +356,17 @@ function ViewFeedbackBox({ changeState, data } : {
 }
 
 
-function MatchScore({ onClick }: { onClick: () => void }) {
+function MatchScore({ onClick, items }: { items: FeedbackItem[]; onClick: () => void }) {
+
+    const filteredItems = items.filter(item => item.key === FeedbackCategory.MATCH_SCORE);
+
+    const score = filteredItems[0]?.description
+
     return (
         <div className="p-2 flex flex-col justify-between h-64 items-center">
-            <h3>Match Score</h3>
-            <img src="/favicon.ico" alt="icon" width="100" />
+            <h2>Match Score</h2>
+
+            <h1>{score}</h1>
             <button className="orange_button" onClick={onClick}>Upload and Rescan</button>
         </div>
     );
