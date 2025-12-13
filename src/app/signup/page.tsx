@@ -1,19 +1,23 @@
+// Alvin Ngo 
+// 12/12/2025
+
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
-    setSuccess(null);
     setLoading(true);
 
     try {
@@ -28,9 +32,20 @@ export default function SignupPage() {
       if (!res.ok) {
         setError(data.error || "Sign up failed.");
       } else {
-        setSuccess("Account created! You can now log in.");
-        // optional: redirect after success
-        // router.push("/login");
+        // Account created, now auto-login
+        const signInRes = await signIn("credentials", {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (signInRes?.ok) {
+          router.push("/");
+        } else {
+          setError(
+            "Account created but login failed. Please try logging in manually."
+          );
+        }
       }
     } catch (err) {
       console.error(err);
@@ -52,11 +67,6 @@ export default function SignupPage() {
       >
         {error && (
           <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
-        )}
-        {success && (
-          <p className="text-sm text-green-600 bg-green-50 p-2 rounded">
-            {success}
-          </p>
         )}
 
         {/* Email Input */}

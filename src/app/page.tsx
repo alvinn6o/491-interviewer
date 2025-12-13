@@ -1,10 +1,15 @@
 //Author: Dylan Hartley
 //Date: 12/12/2025
 
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const { data: session } = useSession();
+
   return (
     <main className="min-h-screen bg-white">
       {/* Hero Section */}
@@ -26,15 +31,22 @@ export default function Home() {
         </p>
 
         {/* CTA Buttons */}
-        <Link
-          href="/signup"
-          className="mb-3 rounded bg-orange-500 px-16 py-3 text-lg font-semibold text-white transition hover:bg-orange-600"
-        >
-          Sign Up
-        </Link>
-        <Link href="/login" className="text-sm text-gray-600 hover:underline">
-          Or Login
-        </Link>
+        {!session?.user && (
+          <>
+            <Link
+              href="/signup"
+              className="mb-3 rounded bg-orange-500 px-16 py-3 text-lg font-semibold text-white transition hover:bg-orange-600"
+            >
+              Sign Up
+            </Link>
+            <Link
+              href="/login"
+              className="text-sm text-gray-600 hover:underline"
+            >
+              Or Login
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Feature Cards Section */}
