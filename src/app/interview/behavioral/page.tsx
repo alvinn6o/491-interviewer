@@ -17,10 +17,14 @@ async function OnStartInterviewClicked(): Promise<string> {
     //TODO:
     //Establish connection to server
     //Begin camera and audio recording
+    //Get Interview Prompt from server
+
+    //dummy data in place of actual response
+    const prompt = "This is where I would place the interview question or prompt. If I had one!";
 
     //return stub promise
     return new Promise((resolve) => {
-        setTimeout(() => resolve("Connection successful!"), 10);
+        setTimeout(() => resolve(prompt), 10);
     });
 };
 
@@ -116,25 +120,32 @@ function ViewSwitcher() {
 
     const [feedbackData, setFeedbackData] = useState(test_items);
 
+    const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
+
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} />);
+            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} prompt={interviewPrompt} />);
 
         case BIPageState.END:
             return (<BIEnd changeState={setPageState} data={feedbackData} />);
     }
 }
 
-function BIStart({ changeState } : { changeState: React.Dispatch<React.SetStateAction<BIPageState>> }) {
+function BIStart({ changeState, changePrompt }: {
+    changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
+    changePrompt: React.Dispatch<React.SetStateAction<string>>;
+}) {
 
     const StartInterviewButton = async () => {
         try {
             //Try and Wait For Upload
             const result = await OnStartInterviewClicked();
-            console.log(result);
+
+            //Set response as prompt
+            changePrompt(result);
 
             //Change state if successful
             changeState(BIPageState.ACTIVE);
@@ -151,9 +162,10 @@ function BIStart({ changeState } : { changeState: React.Dispatch<React.SetStateA
     );
 }
 
-function BIActive({ changeState, changeFeedbackData }: {
+function BIActive({ changeState, changeFeedbackData, prompt }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
+    prompt: string;
 }) {
 
 
@@ -172,10 +184,26 @@ function BIActive({ changeState, changeFeedbackData }: {
         }
     };
 
+    const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
+
+        return (
+            <div className="outline-2 rounded w-full">
+                <h2>{title}</h2>
+                <hr />
+                {children}
+            </div>
+        )
+    };
+
     return (
-        <div className={`${styles.centered_column} w-full`}>
+        <div className={`${styles.centered_column} w-3/4`}>
             <CameraBox />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
+            <DisplayBox title="Interview Prompt">
+                <p>
+                    {prompt} 
+                </p>
+            </DisplayBox>
         </div>
     );
 }
