@@ -15,15 +15,48 @@ import type { ReactNode } from "react";
 
 async function OnUploadResumeClicked(): Promise<string>  {
 
-    //TODO:
-    //Open file selection dialogue
-    //Send file to Server
+    try {
+        const file = await WaitForFile();
+        console.log("Selected file:", file);
 
-    //return stub promise
+        //TODO:
+        //Send file to Server
+
+    } catch (err) {
+        console.error(err);
+
+        //TODO: dont advance if upload failed
+    }
+
     return new Promise((resolve) => {
         setTimeout(() => resolve("Upload complete!"), 10);
     });
+
+    
 };
+
+export async function WaitForFile(): Promise<File> {
+    return new Promise((resolve, reject) => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".pdf,.doc,.docx,.txt";
+
+        input.onchange = () => {
+            const file = input.files?.item(0);
+
+            if (!file) {
+                reject(new Error("No file selected"));
+                return;
+            }
+
+            resolve(file);
+        };
+
+        input.onerror = () => reject(new Error("File selection failed"));
+
+        input.click();
+    });
+}
 
 function OnFailedUpload() {
     //Used for failed upload of resume and job description
