@@ -82,7 +82,7 @@ export default function BehavioralInterview() {
 
    return (
 
-        <main className={styles.centered_column}>
+        <main className={`${styles.centered_column} pt-12`}>
             <h1>Behavioral Interview Session</h1>
             <p className="description">
                 Simulate an authentic interview experience.

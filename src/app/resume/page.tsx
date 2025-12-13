@@ -102,7 +102,7 @@ export default function ResumeUpload() {
 
     return (
 
-        <main className={styles.centered_column}>
+        <main className={`${styles.centered_column} pt-12`}>
             <h1>Resume Scanning</h1>
             <p className="description">Upload your resume and get a real ATS score that
                 reflects what the big companies are using.</p>

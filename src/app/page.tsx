@@ -1,121 +1,94 @@
-"use client";
+//Author: Dylan Hartley
+//Date: 12/12/2025
 
-import { useState } from "react";
-import { api } from "~/trpc/react";
+import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
-  const [author, setAuthor] = useState("");
-  const [message, setMessage] = useState("");
-
-  // RETRIEVE: Fetch all messages from Neon database
-  const { data: messages, refetch } = api.demo.getMessages.useQuery();
-
-  // SAVE: Insert new message into Neon database
-  const saveMessage = api.demo.saveMessage.useMutation({
-    onSuccess: () => {
-      setAuthor("");
-      setMessage("");
-      refetch();
-    },
-  });
-
-  // DELETE: Clear all messages
-  const clearAll = api.demo.clearAll.useMutation({
-    onSuccess: () => refetch(),
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (author.trim() && message.trim()) {
-      saveMessage.mutate({ author, message });
-    }
-  };
-
   return (
-    <main className="min-h-screen bg-gray-900 p-8 text-white">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="mb-2 text-3xl font-bold">SkillSift - Database Demo</h1>
-        <p className="mb-8 text-gray-400">
-          Save and retrieve data from Neon PostgreSQL and Prisma
-        </p>
-
-        {/* SAVE FORM */}
-        <form onSubmit={handleSubmit} className="mb-8 rounded bg-gray-800 p-6">
-          <h2 className="mb-4 text-xl font-semibold text-green-400">
-            SAVE to Database
-          </h2>
-          <div className="mb-4">
-            <input
-              type="text"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Your name"
-              className="w-full rounded bg-gray-700 px-4 py-2 text-white"
-            />
-          </div>
-          <div className="mb-4">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Your message"
-              className="w-full rounded bg-gray-700 px-4 py-2 text-white"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={saveMessage.isPending}
-            className="rounded bg-green-600 px-6 py-2 font-semibold hover:bg-green-700 disabled:opacity-50"
-          >
-            {saveMessage.isPending ? "Saving..." : "Save to Database"}
-          </button>
-        </form>
-
-        {/* RETRIEVE DISPLAY */}
-        <div className="mb-8 rounded bg-gray-800 p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-blue-400">
-              RETRIEVE from Database
-            </h2>
-            <button
-              onClick={() => clearAll.mutate()}
-              className="rounded bg-red-600 px-4 py-1 text-sm hover:bg-red-700"
-            >
-              Clear All
-            </button>
-          </div>
-
-          {messages?.length === 0 && (
-            <p className="text-gray-400">No messages yet. Add one above!</p>
-          )}
-
-          <ul className="space-y-2">
-            {messages?.map((msg) => (
-              <li key={msg.id} className="rounded bg-gray-700 p-3">
-                <span className="font-semibold text-purple-400">
-                  {msg.author}:
-                </span>{" "}
-                {msg.message}
-                <span className="ml-2 text-sm text-gray-500">
-                  (ID: {msg.id}, {new Date(msg.createdAt).toLocaleString()})
-                </span>
-              </li>
-            ))}
-          </ul>
+    <main className="min-h-screen bg-white">
+      {/* Hero Section */}
+      <div className="flex flex-col items-center px-8 py-16">
+        {/* Logo */}
+        <div className="mb-6">
+          <Image
+            src="/images/landing/skill-skift-card.png"
+            alt="SkillSift Logo"
+            width={300}
+            height={120}
+            className="object-contain"
+          />
         </div>
 
-        {/* CODE EXPLANATION */}
-        <div className="rounded bg-gray-800 p-6 text-sm">
-          <h3 className="mb-2 font-semibold text-yellow-400">
-            Code Flow (for demo):
-          </h3>
-          <p className="mb-1 text-gray-300">
-            <strong className="text-green-400">SAVE:</strong> Form → tRPC
-            mutation → Prisma db.demoMessage.create() → Neon PostgreSQL
+        {/* Tagline */}
+        <p className="mb-8 text-center text-lg text-gray-700">
+          Prepare for your job interviews with Artificial Intelligence
+        </p>
+
+        {/* CTA Buttons */}
+        <Link
+          href="/signup"
+          className="mb-3 rounded bg-orange-500 px-16 py-3 text-lg font-semibold text-white transition hover:bg-orange-600"
+        >
+          Sign Up
+        </Link>
+        <Link href="/login" className="text-sm text-gray-600 hover:underline">
+          Or Login
+        </Link>
+      </div>
+
+      {/* Feature Cards Section */}
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-8 py-12 md:grid-cols-3">
+        {/* AI Interview Card */}
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-15 flex h-48 w-full items-center justify-center">
+            <Image
+              src="/images/landing/interview-card.png"
+              alt="AI Interview"
+              width={250}
+              height={250}
+              className="object-contain"
+            />
+          </div>
+          <h3 className="mb-3 text-xl font-bold">AI Interview</h3>
+          <p className="text-sm text-gray-600">
+            Practice for your interview to see how your body language and
+            answers can improve
           </p>
-          <p className="text-gray-300">
-            <strong className="text-blue-400">RETRIEVE:</strong> tRPC query →
-            Prisma db.demoMessage.findMany() → Neon PostgreSQL → Display
+        </div>
+
+        {/* Technical Questions Card */}
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-15 flex h-48 w-full items-center justify-center">
+            <Image
+              src="/images/landing/technical-card.png"
+              alt="Technical Questions"
+              width={250}
+              height={250}
+              className="object-contain"
+            />
+          </div>
+          <h3 className="mb-3 text-xl font-bold">Technical Questions</h3>
+          <p className="text-sm text-gray-600">
+            Practice your hard skills with sample questions
+          </p>
+        </div>
+
+        {/* Resume Report Card */}
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-15 flex h-48 w-full items-center justify-center">
+            <Image
+              src="/images/landing/resume-card.png"
+              alt="Resume Report"
+              width={250}
+              height={250}
+              className="object-contain"
+            />
+          </div>
+          <h3 className="mb-3 text-xl font-bold">Resume Report</h3>
+          <p className="text-sm text-gray-600">
+            Upload your Resume to be graded and reviewed for any missing
+            information that companies look for!
           </p>
         </div>
       </div>
