@@ -16,7 +16,7 @@ async function OnStartInterviewClicked(): Promise<string> {
 
     //TODO:
     //Establish connection to server
-    //Begin camera and audio feed
+    //Begin camera and audio recording
 
     //return stub promise
     return new Promise((resolve) => {
@@ -50,6 +50,7 @@ type FeedbackItem = {
 async function OnEndInterviewClicked(): Promise<FeedbackItem[]> {
 
     //TODO:
+    //Send audio and camera to server
     //Request analysis and receive feedback
 
     //test items in place of actual data
