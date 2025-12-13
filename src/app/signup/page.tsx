@@ -41,7 +41,7 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+    <main className="flex flex-col items-center justify-center min-h-screen bg-white ">
       {/* Title */}
       <h1 className="text-3xl font-bold mb-6">Sign Up</h1>
 

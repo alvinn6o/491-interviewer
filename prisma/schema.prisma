@@ -1,3 +1,6 @@
+// Dylan Hartley
+// 12/12/2025
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -8,16 +11,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Post {
-  id          Int      @id @default(autoincrement())
-  name        String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdById String
-  createdBy   User     @relation(fields: [createdById], references: [id])
-
-  @@index([name])
-}
+// ============================================
+// NextAuth Tables (Required for Authentication)
+// ============================================
 
 model Account {
   id                       String  @id @default(cuid())
@@ -47,15 +43,17 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  accounts      Account[]
-  posts         Post[]
-  sessions      Session[]
+  id                String              @id @default(cuid())
+  name              String?
+  email             String?             @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  accounts          Account[]
+  sessions          Session[]
+  profile           UserProfile?
+  resumeAnalyses    ResumeAnalysis[]
+  interviewSessions InterviewSession[]
 }
 
 model VerificationToken {
@@ -66,9 +64,93 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-model DemoMessage {
-  id        Int      @id @default(autoincrement())
-  author    String
-  message   String
-  createdAt DateTime @default(now())
+// ============================================
+// User Profile (Optional Extended Info)
+// ============================================
+
+model UserProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String?
+  lastName        String?
+  phoneNumber     String?
+  targetRole      String?
+  yearsExperience Int?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ============================================
+// Resume Scanner Feature
+// ============================================
+
+model ResumeAnalysis {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeName     String
+  jobDescription String?
+  atsScore       Int?
+  matchScore     Float?
+  feedback       Json
+  analyzedAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ============================================
+// Interview Features (Behavioral & Technical)
+// ============================================
+
+model InterviewSession {
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          InterviewType
+  status        SessionStatus       @default(IN_PROGRESS)
+  startedAt     DateTime            @default(now())
+  completedAt   DateTime?
+  overallScore  Float?
+  feedback      Json?
+  responses     InterviewResponse[]
+
+  @@index([userId])
+}
+
+model InterviewResponse {
+  id         String           @id @default(cuid())
+  sessionId  String
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  score      Float?
+  feedback   String?
+  answeredAt DateTime         @default(now())
+
+  @@index([sessionId])
+}
+
+model TechnicalQuestion {
+  id         String   @id @default(cuid())
+  question   String
+  difficulty String
+  category   String
+  answer     String?
+  createdAt  DateTime @default(now())
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum InterviewType {
+  BEHAVIORAL
+  TECHNICAL
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
