@@ -19,10 +19,39 @@ export default function AccountPage() {
   );
 }
 
-function postFeedback() {
+async function postFeedback() {
 
+    console.log("tried to POST feedback");
+
+    try {
+        const content = {
+            text: "test content",
+        };
+
+        await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+        });
+
+        console.log("POST successful")
+    } catch (err) {
+        console.error(err);
+    }
 }
 
-function deleteFeedback() {
+async function deleteFeedback() {
+    console.log("tried to DELETE feedback");
 
+    try {
+
+        await fetch("/api/feedback", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" }
+        });
+
+        console.log("DELETE successful")
+    } catch (err) {
+        console.error(err);
+    }
 }
