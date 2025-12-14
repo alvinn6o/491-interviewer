@@ -76,7 +76,6 @@ model UserProfile {
   lastName        String?
   phoneNumber     String?
   emailAddress    String?
-  phoneNumber     String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
