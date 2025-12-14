@@ -55,6 +55,7 @@ model User {
   profile           UserProfile?
   resumeAnalyses    ResumeAnalysis[]
   interviewSessions InterviewSession[]
+  settings      UserSettings?
 }
 
 model VerificationToken {
@@ -82,10 +83,13 @@ model UserProfile {
 }
 
 model UserSettings {
-  id            String      @id @default(cuid())
-  userId        String
-  darkMode      Boolean
-  languagePref  String
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  prefersDarkMode       Boolean     @default(false)
+  languagePref          String?     @default("JavaScript")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 

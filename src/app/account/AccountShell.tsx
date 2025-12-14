@@ -10,19 +10,40 @@ const sidebarItems = [
   { label: "Settings", href: "/account/settings" },
 ];
 
-export default function AccountShell({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
+export default function AccountShell({
+  initialDarkMode,
+  children,
+}: {
+  initialDarkMode: boolean;
+  children: React.ReactNode;
+}) {
+  const [isDark, setIsDark] = useState(initialDarkMode);
   const pathname = usePathname();
 
   const pageBg = isDark ? "bg-neutral-900 text-white" : "bg-white text-gray-900";
 
+  async function handleToggle() {
+  const next = !isDark;
+  setIsDark(next);
+
+  try {
+    await fetch("/api/account/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prefersDarkMode: next }),
+    });
+  } catch (e) {
+    console.error("Failed to save dark mode", e);
+  }
+}
+
+
   return (
     <main
-      className={`min-h-screen w-full flex items-center justify-center transition-colors ${pageBg}`}
+      className={`min-h-screen w-full flex justify-center pt-20 transition-colors ${pageBg}`}
     >
-      {/* Centered row: [sidebar] [card] [spacer] */}
       <div className="flex items-start gap-8">
-        {/* LEFT: Sidebar + dark-mode toggle stacked */}
+        {/* LEFT: sidebar + toggle */}
         <div className="flex flex-col items-center gap-4">
           <aside
             className={`w-64 rounded-xl shadow-md p-4 space-y-4 ${
@@ -57,49 +78,45 @@ export default function AccountShell({ children }: { children: React.ReactNode }
             })}
           </aside>
 
-          <DarkModeToggle isDark={isDark} setIsDark={setIsDark} />
+          <DarkModeToggle isDark={isDark} onToggle={handleToggle} />
         </div>
 
-        {/* MIDDLE: Account card (children from sub-pages) */}
+        {/* CARD */}
         <div
-          className={`w-full max-w-xl border border-black rounded-xl p-10 shadow-lg ${
+          className={`w-full max-w-2xl border border-black rounded-xl p-10 shadow-lg ${
             isDark ? "bg-neutral-800" : "bg-white"
           }`}
         >
           {children}
         </div>
 
-        {/* RIGHT: Invisible spacer to balance the sidebar width */}
         <div className="w-64" aria-hidden="true" />
       </div>
     </main>
   );
 }
 
-type DarkModeToggleProps = {
+function DarkModeToggle({
+  isDark,
+  onToggle,
+}: {
   isDark: boolean;
-  setIsDark: Dispatch<SetStateAction<boolean>>;
-};
-
-function DarkModeToggle({ isDark, setIsDark }: DarkModeToggleProps) {
+  onToggle: () => void;
+}) {
   return (
     <button
-      onClick={() => setIsDark((v) => !v)}
+      onClick={onToggle}
       className={`flex items-center gap-2 px-3 py-1 rounded-full border shadow-sm text-xs font-medium
       ${isDark ? "bg-neutral-700 border-neutral-500" : "bg-white border-gray-300"}`}
     >
-      <span>Dark Mode ☾</span>
-
-      {/* Track */}
+      <span>☾</span>
       <div
         className={`flex items-center w-12 h-6 rounded-full px-0.5 transition-colors ${
           isDark ? "bg-orange-400 justify-end" : "bg-gray-300 justify-start"
         }`}
       >
-        {/* Knob */}
         <span className="h-5 w-5 rounded-full bg-white shadow" />
       </div>
-
       <span>{isDark ? "On" : "Off"}</span>
     </button>
   );
