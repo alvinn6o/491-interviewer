@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
+import TechnicalInterviewViewSwitcher from "./technicalInterview";
 
-export default async function AccountPage() {
+export default async function TechnicalInterviewPage() {
   const session = await auth();
 
   if (!session?.user) {
@@ -9,8 +10,8 @@ export default async function AccountPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white p-8">
-    
+    <main className="min-h-screen bg-white">
+      <TechnicalInterviewViewSwitcher />
     </main>
   );
 }

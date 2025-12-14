@@ -1,5 +1,6 @@
 // Dylan Hartley
 // 12/12/2025
+// Alexander Tu
 
 generator client {
   provider = "prisma-client-js"
@@ -75,10 +76,17 @@ model UserProfile {
   firstName       String?
   lastName        String?
   phoneNumber     String?
-  targetRole      String?
-  yearsExperience Int?
+  emailAddress    String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model UserSettings {
+  id            String      @id @default(cuid())
+  userId        String
+  darkMode      Boolean
+  languagePref  String
+  @@index([userId])
 }
 
 // ============================================
@@ -138,6 +146,18 @@ model TechnicalQuestion {
   category   String
   answer     String?
   createdAt  DateTime @default(now())
+}
+
+model InterviewReport {
+  id            String      @id @default(cuid())
+  userId        String
+  sessionId     String
+  summary       String
+  isFavorite    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([userId])
+  @@index([sessionId])
 }
 
 // ============================================

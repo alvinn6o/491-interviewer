@@ -43,15 +43,24 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-white">
-      {/* Title */}
-      <h1 className="text-3xl font-bold mb-6">Login</h1>
+    <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-200 via-orange-300 to-orange-400">
 
       {/* Login Form */}
       <form
         onSubmit={handleLogin}
         className="flex flex-col gap-4 w-full max-w-sm bg-white p-8 rounded shadow"
       >
+
+      {/* Logo + Title */}
+        <div className="flex flex-col items-center gap-3 mb-2">
+          <img
+            src="/images/landing/skill-skift-card.png"
+            alt="SkillSift Card"
+            className="h-16 w-auto mb-1"
+          />
+          <h1 className="text-2xl font-semibold">Login</h1>
+        </div>
+
         {error && (
           <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
         )}
@@ -84,6 +93,17 @@ export default function LoginPage() {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+
+        {/* Remeber me? */}
+        <div className="flex items-center justify-between text-sm">
+          <label className="flex items-center gap-2 text-gray-600">
+            <input
+              type="checkbox"
+              className="accent-orange-500"
+            />
+            Remember me?
+          </label>
+        </div>
 
         <p className="text-sm text-center mt-2">
           Don't have an account?{" "}
