@@ -1,3 +1,6 @@
+// Alvin Ngo
+// 12/12/2025
+
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import bcrypt from "bcryptjs";
