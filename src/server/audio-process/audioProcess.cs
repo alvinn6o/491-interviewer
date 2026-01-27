@@ -23,22 +23,24 @@ class AudioProcess
     //OUTPUT: tokens and frequency, for use by Behavioral Interview Scoring
     public static Dictionary<string, int> processAudioToTokenCount(string filePath)
     {
-        string text = convertAudioToText(filePath);
-        Dictionary<string, int> tokensByCount = TokenizeText.textToTokensCount(text);
+        Task<string> text = convertAudioToText(filePath); //TODO: error catch
+        Dictionary<string, int> tokensByCount = TokenizeText.textToTokensCount(text.Result);
     
         return tokensByCount;
     }
 
     //INPUT: file path to WAV or MP3 containing human speech
     //OUTPUT: string containing transcript of the audio file
-    private static string convertAudioToText(string filePath) 
+    private static async Task<string> convertAudioToText(string filePath) 
     {
         //TODO: add api call
+        await TranscribeAudioAPIAsync(filePath);
+
         return "";
     }
 
     static readonly string BaseUrl = "https://api.assemblyai.com";
-    static readonly string ApiKey = "30d7632d15844383b062a2b468528848";
+    static readonly string ApiKey = "excised";
 
     //The following function was provided by AssemblyAI
     //As part of template code for using their API
@@ -61,13 +63,13 @@ class AudioProcess
 
     //The following function is template code for an API call
     //provided by AssemblyAI
-    private static async Task Main(string[] args)
+    private static async Task TranscribeAudioAPIAsync(string filePath)
     {
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("authorization", ApiKey);
 
-        // var audioUrl = await UploadFileAsync("./my_audio.mp3", httpClient);
-        string audioUrl = "https://assembly.ai/wildfires.mp3";
+        var audioUrl = await UploadFileAsync(filePath, httpClient);
+        //string audioUrl = "https://assembly.ai/wildfires.mp3";
 
         var requestData = new
         {
@@ -85,9 +87,7 @@ class AudioProcess
         var transcriptData = JsonSerializer.Deserialize<JsonElement>(transcriptResponseBody);
 
         if (!transcriptData.TryGetProperty("id", out JsonElement idElement))
-        {
             throw new Exception("Failed to get transcript ID");
-        }
 
         string transcriptId = idElement.GetString() ?? throw new Exception("Transcript ID is null");
 
