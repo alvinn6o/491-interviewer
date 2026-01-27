@@ -1,103 +1,135 @@
-//Author: Brandon Christian
-//Date: 1-25-2026
-
-using System.Collections.Generic;
+﻿//Author: Brandon Christian
+//Date: 1-27-2026
+//Take a recording of a user's Behavioral Interview Session and
+//use an API call to transcribe it into text,
+//then send it to the analysis system
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 
-//INPUT: audio file recorded by user in a Behavioral Interview Session
-//OUTPUT: tokens and frequency, for use by Behavioral Interview Scoring
-private Dictionary<string, int> processAudioToTokenCount() //TODO: input as file
+
+class AudioProcess
 {
-	string text = convertAudioToText(); //TODO: not implemented
-	List<string> tokens = tokenizeText(text);
-	Dictionary<string, int> tokensByCount = groupTokens(tokens);
+    //INPUT: file path to WAV or MP3 file recorded by user in a Behavioral Interview Session
+    //OUTPUT: tokens and frequency, for use by Behavioral Interview Scoring
+    public static Dictionary<string, int> processAudioToTokenCount(string filePath)
+    {
+        string text = convertAudioToText(filePath);
+        Dictionary<string, int> tokensByCount = TokenizeText.textToTokensCount(text);
+    
+        return tokensByCount;
+    }
 
-	return tokensByCount;
+    //INPUT: file path to WAV or MP3 containing human speech
+    //OUTPUT: string containing transcript of the audio file
+    private static string convertAudioToText(string filePath) 
+    {
+        //TODO: add api call
+        return "";
+    }
+
+    static readonly string BaseUrl = "https://api.assemblyai.com";
+    static readonly string ApiKey = "30d7632d15844383b062a2b468528848";
+
+    //The following function was provided by AssemblyAI
+    //As part of template code for using their API
+    private static async Task<string> UploadFileAsync(string filePath, HttpClient httpClient)
+    {
+        using (var fileStream = File.OpenRead(filePath))
+        using (var fileContent = new StreamContent(fileStream))
+        {
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            using (var response = await httpClient.PostAsync("https://api.assemblyai.com/v2/upload", fileContent))
+            {
+                response.EnsureSuccessStatusCode();
+                var jsonDoc = await response.Content.ReadFromJsonAsync<JsonDocument>();
+                // Add null check to fix CS8602 warning
+                return jsonDoc?.RootElement.GetProperty("upload_url").GetString() ??
+                       throw new InvalidOperationException("Failed to get upload URL from response");
+            }
+        }
+    }
+
+    //The following function is template code for an API call
+    //provided by AssemblyAI
+    private static async Task Main(string[] args)
+    {
+        using var httpClient = new HttpClient();
+        httpClient.DefaultRequestHeaders.Add("authorization", ApiKey);
+
+        // var audioUrl = await UploadFileAsync("./my_audio.mp3", httpClient);
+        string audioUrl = "https://assembly.ai/wildfires.mp3";
+
+        var requestData = new
+        {
+            audio_url = audioUrl,
+            speech_model = "universal"
+        };
+
+        var jsonContent = new StringContent(
+            JsonSerializer.Serialize(requestData),
+            Encoding.UTF8,
+            "application/json");
+
+        using var transcriptResponse = await httpClient.PostAsync($"{BaseUrl}/v2/transcript", jsonContent);
+        var transcriptResponseBody = await transcriptResponse.Content.ReadAsStringAsync();
+        var transcriptData = JsonSerializer.Deserialize<JsonElement>(transcriptResponseBody);
+
+        if (!transcriptData.TryGetProperty("id", out JsonElement idElement))
+        {
+            throw new Exception("Failed to get transcript ID");
+        }
+
+        string transcriptId = idElement.GetString() ?? throw new Exception("Transcript ID is null");
+
+        string pollingEndpoint = $"{BaseUrl}/v2/transcript/{transcriptId}";
+
+        while (true)
+        {
+            using var pollingResponse = await httpClient.GetAsync(pollingEndpoint);
+            var pollingResponseBody = await pollingResponse.Content.ReadAsStringAsync();
+            var transcriptionResult = JsonSerializer.Deserialize<JsonElement>(pollingResponseBody);
+
+            if (!transcriptionResult.TryGetProperty("status", out JsonElement statusElement))
+            {
+                throw new Exception("Failed to get transcription status");
+            }
+
+            string status = statusElement.GetString() ?? throw new Exception("Status is null");
+
+            if (status == "completed")
+            {
+                if (!transcriptionResult.TryGetProperty("text", out JsonElement textElement))
+                {
+                    throw new Exception("Failed to get transcript text");
+                }
+
+                string transcriptText = textElement.GetString() ?? string.Empty;
+                Console.WriteLine($"Transcript Text: {transcriptText}");
+                break;
+            }
+            else if (status == "error")
+            {
+                string errorMessage = transcriptionResult.TryGetProperty("error", out JsonElement errorElement)
+                    ? errorElement.GetString() ?? "Unknown error"
+                    : "Unknown error";
+
+                throw new Exception($"Transcription failed: {errorMessage}");
+            }
+            else
+            {
+                await Task.Delay(3000);
+            }
+        }
+    }
 }
 
-//TODO: not implemented.
-//INPUT: some audio file containing human speech
-//OUTPUT: string containing transcript of the audio file
-private string convertAudioToText() //TODO: input as file
-{
-	//TODO: api call, traditional or ai?
-	//or custom algorithm?
-	return "";
-}
-
-//INPUT: string containing the textified audio
-//OUTPUT: list of words (tokens)
-private List<string> tokenizeText(string text)
-{
-	string[] words = text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-	List<string> tokens = new List<string>();
-
-	string currentToken = "";
-
-	foreach (string word in words)
-	{
-		if partOfCombinedToken(currentToken, word)
-		{
-			//Combine or create new token
-			currentToken = currentToken + " " + word;
-		}
-		else
-		{
-			//Add and reset
-			tokens.Add(currentToken);
-			currentToken = "";
-		}
-	}
-}
-
-//INPUT: list of non-unique tokens ordered by appearence
-//OUTPUT: dict of strings (tokens) as keys and their count as values
-private Dictionary<string, int> groupTokens(List<string> allTokens)
-{
-	Dictionary<string, int> tokensByCount = new Dictionary<string, int>;
-
-	foreach (string t in allTokens)
-	{
-		//remove capitals, punctuation, etc.
-		string normalized_t = normalizeToken(t);
-
-		if normalized_t == ""
-			continue; //skip empty tokens
-
-		if !(tokensByCount.ContainsKey(normalized_t))
-			tokensByCount.Add(normalized_t, 1);
-		else
-			tokensByCount[normalized_t] = tokensByCount[normalized_t] + 1;
-	}
-
-	return tokensByCount;
-}
-
-//INPUT: unparsed token
-//OUTPUT: token with capitals lowered and non-letters removed
-private string normalizeToken(string token)
-{
-	string no_uppercase = token.ToLower()
-
-	string no_punct = ""
-
-	foreach (char c in no_uppercase)
-	{
-		if c.IsLetter()
-			no_punct = no_punct + c
-	}
-
-	return no_punct
-}
-
-//INPUT: previous token and current words
-//OUTPUT: whether the token and would should be combined
-//to create a new, longer token 
-//TODO: refer to some pre-existing list of multi-word tokens
-private bool partOfCombinedToken(string lastToken, string word)
-{
-	if lastToken == "" //no current token
-		return true
-	else
-		return false
-}
