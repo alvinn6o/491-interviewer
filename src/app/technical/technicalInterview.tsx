@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
 
 /* Page States */
 enum TIPageState {
@@ -33,9 +34,16 @@ export default function TechnicalInterviewViewSwitcher() {
   const [questions] = useState<Question[]>(fetchTechnicalQuestions());
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   
-  const [code, setCode] = useState("");
+  const [language, setLanguage] = useState<SupportedLanguage>("python");
+  const [code, setCode] = useState(getStarterCode("python"));
   const [output, setOutput] = useState("");
   const [passed, setPassed] = useState<boolean | null>(null);
+
+  // Reset code to starter when language changes
+  function handleLanguageChange(newLang: SupportedLanguage) {
+    setLanguage(newLang);
+    setCode(getStarterCode(newLang));
+  }
 
   const [questionStatus, setQuestionStatus] = useState<boolean[]>(
     questions.map(() => false) // false = incomplete
