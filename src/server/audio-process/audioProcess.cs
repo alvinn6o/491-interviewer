@@ -21,29 +21,35 @@ class AudioProcess
 {
     //INPUT: file path to WAV or MP3 file recorded by user in a Behavioral Interview Session
     //OUTPUT: tokens and frequency, for use by Behavioral Interview Scoring
-    public static Dictionary<string, int> processAudioToTokenCount(string filePath)
+    public static Dictionary<string, int> ProcessAudioToTokenCount(string filePath)
     {
-        Task<string> text = convertAudioToText(filePath); //TODO: error catch
-        Dictionary<string, int> tokensByCount = TokenizeText.textToTokensCount(text.Result);
+        Task<string> text = ConvertAudioToTextAsync(filePath); //TODO: error catch
+        Dictionary<string, int> tokensByCount = TokenizeText.TextToTokensCount(text.Result);
     
         return tokensByCount;
     }
 
     //INPUT: file path to WAV or MP3 containing human speech
     //OUTPUT: string containing transcript of the audio file
-    private static async Task<string> convertAudioToText(string filePath) 
-    {
-        //TODO: add api call
-        await TranscribeAudioAPIAsync(filePath);
-
-        return "";
+    private static async Task<string> ConvertAudioToTextAsync(string filePath)
+    {         
+        try
+        {
+            var result = await TranscribeAudioAPIAsync(filePath);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+        
     }
 
     static readonly string BaseUrl = "https://api.assemblyai.com";
     static readonly string ApiKey = "excised";
 
-    //The following function was provided by AssemblyAI
-    //As part of template code for using their API
+    //The following function was modified from template code provided by 
+    //AssemblyAI (not ai-generated) to quick-start a call to their API
     private static async Task<string> UploadFileAsync(string filePath, HttpClient httpClient)
     {
         using (var fileStream = File.OpenRead(filePath))
@@ -61,9 +67,9 @@ class AudioProcess
         }
     }
 
-    //The following function is template code for an API call
-    //provided by AssemblyAI
-    private static async Task TranscribeAudioAPIAsync(string filePath)
+    //The following function was modified from template code provided by 
+    //AssemblyAI (not ai-generated) to quick-start a call to their API
+    private static async Task<string> TranscribeAudioAPIAsync(string filePath)
     {
         using var httpClient = new HttpClient();
         httpClient.DefaultRequestHeaders.Add("authorization", ApiKey);
@@ -115,7 +121,7 @@ class AudioProcess
 
                 string transcriptText = textElement.GetString() ?? string.Empty;
                 Console.WriteLine($"Transcript Text: {transcriptText}");
-                break;
+                return transcriptText;
             }
             else if (status == "error")
             {
