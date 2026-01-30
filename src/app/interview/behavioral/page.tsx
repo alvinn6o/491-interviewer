@@ -157,7 +157,7 @@ function BIStart({ changeState, changePrompt }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox />
+            <CameraBox recordAudio={ false } />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
     );
@@ -198,7 +198,7 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <CameraBox />
+            <CameraBox recordAudio={ true } />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>

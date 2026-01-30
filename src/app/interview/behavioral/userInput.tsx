@@ -10,8 +10,21 @@
 import { useEffect, useRef } from "react";
 import { useState } from "react";
 import styles from "./test.module.css";
+import { SendAudioToServer } from "./behavioralService";
 
-export function CameraBox() {
+async function StartStream(useAudio: boolean, useVideo: boolean) {
+    let stream = await navigator.mediaDevices.getUserMedia({
+        audio: useAudio,
+        video: useVideo,
+    });
+
+    return stream
+}
+
+//Camera component
+//Also contains audio meter component
+//TODO: implement camera recording
+export function CameraBox({ recordAudio }: {recordAudio: boolean}) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -20,10 +33,7 @@ export function CameraBox() {
 
         async function startCamera() {
             try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: false,
-                });
+                stream = await StartStream(false, true);
 
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
@@ -55,27 +65,29 @@ export function CameraBox() {
                 muted
                 className="w-full max-w-md rounded"
             />
-            <AudioMeter />
+            <AudioMeter recordAudio = {recordAudio} />
         </div>
 
     )
 }
 
-export function AudioMeter() {
+//Audio Meter component
+function AudioMeter({ recordAudio }: { recordAudio: boolean }) {
     const [level, setLevel] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
     //Wrap AudioSetup in async so the cleanup
-    //can be called synchronously
+    //can be called synchronously from within useEffect
     useEffect(() => {
-        let cleanup: (() => void) | undefined;
 
-        (async () => {
-            cleanup = await SetupAudioAsync(setError, setLevel);
-        })();
+        const cleanup = () => {
+            async () => {
+                await SetupAudioAsync(setError, setLevel, recordAudio);
+            }
+        }
 
         return () => {
-            cleanup?.();
+            cleanup();
         };
     }, []); //array empty so it runs automatically on render
      
@@ -97,27 +109,42 @@ export function AudioMeter() {
 //Setup audio meter and audio recording
 async function SetupAudioAsync(
     setError: React.Dispatch<React.SetStateAction<string | null>>,
-    setLevel: React.Dispatch<React.SetStateAction<number>>
+    setLevel: React.Dispatch<React.SetStateAction<number>>,
+    recordAudio: boolean
 )
 {
     try {
-        const stream: MediaStream = await StartStream(); //create audio stream
-        const StopMeter = await StartAudioMeter(stream, setLevel); //start and return cleanup func
+        const stream: MediaStream = await StartStream(true, false); //create audio stream
+        const StopMeter = await StartAudioMeter(stream, setLevel); //start meter and return cleanup func
 
-        //Meter Visuals
-
-        let mediaRecorder: MediaRecorder = new MediaRecorder(stream);
-        let chunks: Blob[] = StartRecording(mediaRecorder);
-
-        return async () => {
-            const data: Blob = await StopRecording(mediaRecorder, chunks);
-
+        const cleanup = async () => {
             stream?.getTracks().forEach(track => track.stop());
-
             StopMeter();
-
-            //TODO: send data to server
         }
+
+        //if not recordAudio, then only cleanup audio meter
+        if (recordAudio)
+        {
+            console.log("Start audio recording")
+
+            let mediaRecorder: MediaRecorder = new MediaRecorder(stream);
+            let chunks: Blob[] = StartRecording(mediaRecorder);
+
+            //return cleanup function that stops the audio and sends it to the server
+            return async () => {
+                cleanup();
+
+                const data: Blob = await StopRecording(mediaRecorder, chunks);
+                SendAudioToServer(data);
+            }
+        }
+        else
+        {
+            console.log("Start meter without recording")
+
+            return cleanup
+        }
+            
     }
     catch (err)
     {
@@ -125,17 +152,6 @@ async function SetupAudioAsync(
         console.error(err);
     }
 }
-
-async function StartStream()
-{
-    let stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false,
-    });
-
-    return stream
-}
-
 
 async function StartAudioMeter(
     stream: MediaStream,
@@ -211,7 +227,3 @@ async function StopRecording(mediaRecorder: MediaRecorder, chunks: Blob[]) {
     });
 }
 
-function SendAudioToServer(data: Blob)
-{
-
-}
