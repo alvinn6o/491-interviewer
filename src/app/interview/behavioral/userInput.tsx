@@ -4,6 +4,8 @@
 
 //Date: 1/29/2026
 //Modified to record audio input
+//Add functions StartRecording, StopRecording, SendAudioToServer, SetupAudioAsync
+//Modify functions AudioMeter
 
 import { useEffect, useRef } from "react";
 import { useState } from "react";
@@ -60,111 +62,23 @@ export function CameraBox() {
 }
 
 export function AudioMeter() {
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const animationRef = useRef<number | null>(null);
-
     const [level, setLevel] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect( () => {
-        let stream: MediaStream;
+    //Wrap AudioSetup in async so the cleanup
+    //can be called synchronously
+    useEffect(() => {
+        let cleanup: (() => void) | undefined;
 
-        //Meter Visuals
-        async function startAudioMeter() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: false,
-                });
+        (async () => {
+            cleanup = await SetupAudioAsync(setError, setLevel);
+        })();
 
-
-                //Update the audio meter visuals
-                const audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
-                const analyser = audioContext.createAnalyser();
-
-                analyser.fftSize = 256;
-
-                source.connect(analyser);
-
-                audioContextRef.current = audioContext;
-                analyserRef.current = analyser;
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-                const updateMeter = () => {
-                    analyser.getByteTimeDomainData(dataArray);
-
-                    // RMS (volume)
-                    let sumSquares = 0;
-                    for (let i = 0; i < dataArray.length; i++) {
-
-                        const val = dataArray?.[i] ?? 128;
-                        const v = (val - 128) / 128;
-                        sumSquares += v * v;
-                    }
-
-                    const rms = Math.sqrt(sumSquares / dataArray.length);
-                    setLevel(Math.min(100, Math.round(rms * 100)));
-
-                    animationRef.current = requestAnimationFrame(updateMeter);
-                }
-
-                updateMeter();
-            } catch (err) {
-                setError('Microphone access denied or unavailable');
-                console.error(err);
-            }
-        }
-
-        let mediaRecorder: MediaRecorder;
-        let chunks: Blob[] = [];
-
-        /*
-        async function recordAudio() {
-            try {
-                mediaRecorder = new MediaRecorder(stream);
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        chunks.push(event.data);
-                    }
-                };
-
-                mediaRecorder.start();
-            }
-            catch (err) {
-                console.error(err);
-            }
-        }
-
-        async function stopRecording() {
-            return new Promise<Blob>(resolve => {
-                mediaRecorder.onstop = () => {
-                    const audioBlob: Blob = new Blob(chunks, { type: 'audio/webm' });
-                    resolve(audioBlob);
-                };
-
-                mediaRecorder.stop();
-            });
-        }*/
-
-        startAudioMeter();
-        //recordAudio();
-
-        //return async () => {
         return () => {
-            //const data: Blob = await stopRecording();
-
-            stream?.getTracks().forEach(track => track.stop());
-            audioContextRef.current?.close();
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        }
-    }, [])
-
+            cleanup?.();
+        };
+    }, []); //array empty so it runs automatically on render
+     
     if (error) return <p>{error}</p>
 
     return (
@@ -180,42 +94,122 @@ export function AudioMeter() {
     )
 }
 
-export function RecordedVideoBox() {
-    return (
-        <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
-            <VideoPlayer />
-        </div>
-    );
+//Setup audio meter and audio recording
+async function SetupAudioAsync(
+    setError: React.Dispatch<React.SetStateAction<string | null>>,
+    setLevel: React.Dispatch<React.SetStateAction<number>>
+)
+{
+    try {
+        const stream: MediaStream = await StartStream(); //create audio stream
+        const StopMeter = await StartAudioMeter(stream, setLevel); //start and return cleanup func
+
+        //Meter Visuals
+
+        let mediaRecorder: MediaRecorder = new MediaRecorder(stream);
+        let chunks: Blob[] = StartRecording(mediaRecorder);
+
+        return async () => {
+            const data: Blob = await StopRecording(mediaRecorder, chunks);
+
+            stream?.getTracks().forEach(track => track.stop());
+
+            StopMeter();
+
+            //TODO: send data to server
+        }
+    }
+    catch (err)
+    {
+        setError("Microphone is unavailable or denied.");
+        console.error(err);
+    }
 }
 
-interface VideoPlayerProps {
-    src?: string;
-    width?: number;
-    height?: number;
-    controls?: boolean;
+async function StartStream()
+{
+    let stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+    });
+
+    return stream
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({
-    src,
-    width = 640,
-    height = 360,
-    controls = true,
-}) => {
-    return (
-        <video
-            width={width}
-            height={height}
-            controls={controls}
-            style={{
-                backgroundColor: "#000", // shows black box if no video
-                display: "block",
-            }}
-        >
-            {src ? <source src={src} type="video/mp4" /> : null}
-            Your browser does not support the video tag.
-        </video>
-    );
-};
+
+async function StartAudioMeter(
+    stream: MediaStream,
+    setLevel: React.Dispatch<React.SetStateAction<number>>
+)
+{
+    //Update the audio meter visuals
+    const audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+
+    analyser.fftSize = 256;
+
+    source.connect(analyser);
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    let animationId: number | null = null;
+
+    const updateMeter = () => {
+        analyser.getByteTimeDomainData(dataArray);
+
+        // RMS (volume)
+        let sumSquares = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+
+            const val = dataArray?.[i] ?? 128;
+            const v = (val - 128) / 128;
+            sumSquares += v * v;
+        }
+
+        const rms = Math.sqrt(sumSquares / dataArray.length);
+        setLevel(Math.min(100, Math.round(rms * 100)));
+
+        animationId = requestAnimationFrame(updateMeter);
+    }
+
+    updateMeter();
+
+    const stopMeter = () => {
+
+        if (animationId !== null) {
+            cancelAnimationFrame(animationId);
+        }
+
+        audioContext.close();
+    }
+
+    return stopMeter;
+}
+
+function StartRecording(mediaRecorder: MediaRecorder) {
+    let chunks: Blob[] = []
+
+    mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+            chunks.push(event.data);
+        }
+    };
+
+    mediaRecorder.start();
+
+    return chunks;
+}
+
+async function StopRecording(mediaRecorder: MediaRecorder, chunks: Blob[]) {
+    return new Promise<Blob>(resolve => {
+        mediaRecorder.onstop = () => {
+            const audioBlob: Blob = new Blob(chunks, { type: 'audio/webm' });
+            resolve(audioBlob);
+        };
+
+        mediaRecorder.stop();
+    });
+}
 
 function SendAudioToServer(data: Blob)
 {

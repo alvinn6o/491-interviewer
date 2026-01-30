@@ -7,7 +7,7 @@ import { useState } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
-import { CameraBox, AudioMeter, RecordedVideoBox, VideoPlayer } from "./userInput"
+import { CameraBox } from "./userInput"
 
 //-------------------------------------
 //  Functionality
@@ -297,5 +297,43 @@ function BIEnd({ changeState, data }: {
     );
 
 }
+
+function RecordedVideoBox() {
+    return (
+        <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
+            <VideoPlayer />
+        </div>
+    );
+}
+
+interface VideoPlayerProps {
+    src?: string;
+    width?: number;
+    height?: number;
+    controls?: boolean;
+}
+
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
+    src,
+    width = 640,
+    height = 360,
+    controls = true,
+}) => {
+    return (
+        <video
+            width={width}
+            height={height}
+            controls={controls}
+            style={{
+                backgroundColor: "#000", // shows black box if no video
+                display: "block",
+            }}
+        >
+            {src ? <source src={src} type="video/mp4" /> : null}
+            Your browser does not support the video tag.
+        </video>
+    );
+};
+
 
 
