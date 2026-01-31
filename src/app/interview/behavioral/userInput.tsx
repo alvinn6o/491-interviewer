@@ -7,10 +7,12 @@
 //Add functions StartRecording, StopRecording, SendAudioToServer, SetupAudioAsync
 //Modify functions AudioMeter
 
+//Date: 1/31/2026
+//send audio back with useState
+
 import { useEffect, useRef } from "react";
 import { useState } from "react";
 import styles from "./test.module.css";
-import { SendAudioToServer } from "./behavioralService";
 
 async function StartStream(useAudio: boolean, useVideo: boolean) {
     let stream = await navigator.mediaDevices.getUserMedia({
@@ -24,7 +26,10 @@ async function StartStream(useAudio: boolean, useVideo: boolean) {
 //Camera component
 //Also contains audio meter component
 //TODO: implement camera recording
-export function CameraBox({ recordAudio }: {recordAudio: boolean}) {
+export function CameraBox({ recordAudio, setAudio }: {
+    recordAudio: boolean,
+    setAudio: React.Dispatch<React.SetStateAction<Blob>>
+}) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -65,29 +70,44 @@ export function CameraBox({ recordAudio }: {recordAudio: boolean}) {
                 muted
                 className="w-full max-w-md rounded"
             />
-            <AudioMeter recordAudio = {recordAudio} />
+            <AudioMeter recordAudio = {recordAudio} setAudio = {setAudio} />
         </div>
 
     )
 }
 
 //Audio Meter component
-function AudioMeter({ recordAudio }: { recordAudio: boolean }) {
+function AudioMeter({ recordAudio, setAudio }: {
+    recordAudio: boolean,
+    setAudio: React.Dispatch<React.SetStateAction<Blob>>
+}) {
     const [level, setLevel] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    //Wrap AudioSetup in async so the cleanup
-    //can be called synchronously from within useEffect
+    console.log("setup audio meter");
+
     useEffect(() => {
+        console.log("call use effect");
 
-        const cleanup = () => {
-            async () => {
-                await SetupAudioAsync(setError, setLevel, recordAudio);
-            }
-        }
+        //Either the cleanup effect or undefined if it never finished
+        let Cleanup: (() => void) | undefined;
 
+        //Run SetupAudioAsync
+        //Wrap in async so it can be run synchronously within useEffect
+        (async () => {
+            Cleanup = await SetupAudioAsync(
+                setError,
+                setLevel,
+                recordAudio,
+                setAudio
+            );
+        })();
+
+        //Run cleanup
         return () => {
-            cleanup();
+            if (Cleanup) {
+                Cleanup();
+            }
         };
     }, []); //array empty so it runs automatically on render
      
@@ -110,9 +130,12 @@ function AudioMeter({ recordAudio }: { recordAudio: boolean }) {
 async function SetupAudioAsync(
     setError: React.Dispatch<React.SetStateAction<string | null>>,
     setLevel: React.Dispatch<React.SetStateAction<number>>,
-    recordAudio: boolean
+    recordAudio: boolean,
+    setAudio: React.Dispatch<React.SetStateAction<Blob>>
 )
 {
+    console.log("setup audio async");
+
     try {
         const stream: MediaStream = await StartStream(true, false); //create audio stream
         const StopMeter = await StartAudioMeter(stream, setLevel); //start meter and return cleanup func
@@ -135,7 +158,9 @@ async function SetupAudioAsync(
                 cleanup();
 
                 const data: Blob = await StopRecording(mediaRecorder, chunks);
-                SendAudioToServer(data);
+
+                if (setAudio)
+                    setAudio(data);
             }
         }
         else

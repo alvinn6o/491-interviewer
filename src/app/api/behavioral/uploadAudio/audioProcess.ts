@@ -6,19 +6,29 @@
 import axios from "axios";
 import TokenizeText from "./tokenizeText";
 
-export async function ProcessAudio(audioData: Blob) {
+export async function ProcessAudioToText(audioData: Blob) {
+    return "TODO: call API with real API key in api/behavioral/uploadAudio/audioProcess.ts. Dummy response.";
+
+    //TODO: return real response, implement API key
     const text: string = await TranscribeAudioAsync(audioData);
+
+    return text; 
+}
+
+export function ProcessTextToTokens(text: string) {
     const tokensByCount = TokenizeText.textToTokensByCount(text);
 
     return tokensByCount;
 }
+
+const API_KEY = "excised"
 
 async function UploadAudioAsync(audioData: Blob) {
     const baseUrl = "https://api.assemblyai.com";
 
     //TODO: use from .env file
     const headers = {
-        authorization: "excised",
+        authorization: API_KEY,
         "content-type": "application/octet-stream",
     };
 
@@ -48,7 +58,7 @@ async function TranscribeAudioAsync(audioData: Blob)
 
     //TODO: use api key from .env file
     const headers = {
-        authorization: "excised",
+        authorization: API_KEY,
     };
 
     const data = {

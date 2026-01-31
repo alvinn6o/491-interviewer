@@ -1,20 +1,23 @@
 ﻿//Author: Brandon Christian
 //Date: 1-30-2026
 //Handle API or DB requests between the user and the server
+//Date: 1-31-2026
+//Send result to client 
 
-export async function SendAudioToServer(data: Blob) {
-    console.log("TODO: implement send audio to server");
+import type { FeedbackItem } from "./feedbackItem";
+import { AnalysisResultToFBItems } from "./feedbackItem";
 
+export async function SendAudioToServer(audioData: Blob) {
     //Extract the file extension
     //which differs between browsers
-    const mimeType = data.type;
+    const mimeType = audioData.type;
     const extension = mimeType.split("/")[1];
 
     const formData = new FormData();
 
     formData.append(
         "audio",
-        data,
+        audioData,
         `recording.${extension}`
     );
 
@@ -22,4 +25,11 @@ export async function SendAudioToServer(data: Blob) {
         method: "POST",
         body: formData
     });
+
+    const data = await response.json();
+
+    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(data));
+
+    //send to page.tsx
+    return fbItems;
 }

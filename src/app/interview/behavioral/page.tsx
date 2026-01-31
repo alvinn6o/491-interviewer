@@ -1,6 +1,9 @@
 ﻿//Author: Brandon Christian
 //Date: 12/12/2025
 
+//Date: 1/31/2026
+//send recorded audio for processing and receive
+
 
 "use client";
 import { useState } from "react";
@@ -8,6 +11,10 @@ import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
 import { CameraBox } from "./userInput"
+import { SendAudioToServer } from "./behavioralService";
+import { FeedbackCategory } from "./feedbackItem";
+import type { FeedbackItem } from "./feedbackItem";
+
 
 //-------------------------------------
 //  Functionality
@@ -34,49 +41,19 @@ function OnFailedStartInterview() {
 }
 
 
-
-enum FeedbackCategory {
-    NONE = "None",
-    NOTES = "Notes",
-    EYE_CONTACT = "Eye Contact",
-    CONFIDENCE = "Confidence",
-    QUALITY_OF_ANSWERS = "Quality of Answers",
-    SOCIABILITY = "Sociability",
-    CLEAR_SPEECH = "Clear Speech"
-
-}
-
-type FeedbackItem = {
-    key: FeedbackCategory,
-    content: string,
-    score: number
-}
-
-async function OnEndInterviewClicked(): Promise<FeedbackItem[]> {
-
-    //TODO:
+async function OnEndInterviewClicked(audioData: Blob): Promise<FeedbackItem[]> {
     //Send audio and camera to server
-    //Request analysis and receive feedback
+    //Receive analysis/feedback
+    //page.tsx > behavioralService.tsx > api/behavioral/uploadAudio/route.ts
+    const fbItems: FeedbackItem[] = await SendAudioToServer(audioData);
 
-    //test items in place of actual data
-    const test_items = [
-        { key: FeedbackCategory.NOTES, content: "Example paragraph. This is where you will see a description of your interview.", score : 1 },
-        { key: FeedbackCategory.EYE_CONTACT, content: "", score : 1 },
-        { key: FeedbackCategory.CONFIDENCE, content: "", score : 2 },
-        { key: FeedbackCategory.QUALITY_OF_ANSWERS, content: "", score : 3 },
-        { key: FeedbackCategory.SOCIABILITY, content: "", score : 4 },
-        { key: FeedbackCategory.CLEAR_SPEECH, content: "", score : 5 },
-
-    ];
-
-    //return stub promise
     return new Promise((resolve) => {
-        setTimeout(() => resolve(test_items), 10);
+        setTimeout(() => resolve(fbItems), 10);
     });
 };
 
 function OnFailedEndInterview() {
-    console.log("Faled Upload");
+    console.log("Faled End Interview");
 }
 
 //-------------------------------------
@@ -123,12 +100,14 @@ function ViewSwitcher() {
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
+
+
     switch (pageState) {
         case BIPageState.START:
             return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} prompt={interviewPrompt} />);
+            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} prompt={interviewPrompt}/>);
 
         case BIPageState.END:
             return (<BIEnd changeState={setPageState} data={feedbackData} />);
@@ -139,6 +118,8 @@ function BIStart({ changeState, changePrompt }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
 }) {
+
+    const [audioData, setAudio] = useState(new Blob());
 
     const StartInterviewButton = async () => {
         try {
@@ -157,7 +138,7 @@ function BIStart({ changeState, changePrompt }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox recordAudio={ false } />
+            <CameraBox recordAudio={false} setAudio={setAudio} />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
     );
@@ -169,11 +150,12 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
     prompt: string;
 }) {
 
+    const [audioData, setAudio] = useState(new Blob());
 
     const EndInterviewButton = async () => {
         try {
             //Try and Wait For Upload
-            const result = await OnEndInterviewClicked();
+            const result = await OnEndInterviewClicked(audioData);
 
             //store data in useState
             changeFeedbackData(result);
@@ -181,6 +163,7 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
             //Change state if successful
             changeState(BIPageState.END);
         } catch (error) {
+            console.log(error);
             OnFailedEndInterview();
         }
     };
@@ -198,7 +181,7 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <CameraBox recordAudio={ true } />
+            <CameraBox recordAudio={true} setAudio={setAudio} />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>
