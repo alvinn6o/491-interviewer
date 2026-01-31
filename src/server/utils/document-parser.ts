@@ -2,8 +2,7 @@
  * Document parsing utilities for text extraction from resume files
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse");
+const pdfParse = require("pdf-parse/lib/pdf-parse");
 import mammoth from "mammoth";
 import type { FileType } from "./file-validation";
 
@@ -26,8 +25,6 @@ export type ParseResult = ExtractionResult | ExtractionError;
 export async function extractTextFromPDF(buffer: Buffer): Promise<ParseResult> {
   try {
     const data = await pdfParse(buffer);
-    console.log("PDF text length:", data.text?.length);
-    console.log("PDF text preview:", data.text?.substring(0, 200));
     return {
       success: true,
       text: cleanText(data.text),
@@ -119,6 +116,23 @@ function cleanText(text: string): string {
       .map((line) => line.trim())
       .join("\n")
       // Trim overall text
+      .trim()
+  );
+}
+
+/**
+ * Preprocesses job description text for ATS analysis
+ */
+export function preprocessJobDescription(text: string): string {
+  return (
+    text
+      // Normalize whitespace
+      .replace(/[ \t]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      // Trim lines
+      .split("\n")
+      .map((line) => line.trim())
+      .join("\n")
       .trim()
   );
 }

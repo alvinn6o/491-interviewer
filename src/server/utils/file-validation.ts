@@ -6,8 +6,10 @@ import { fileTypeFromBuffer } from "file-type";
 
 export const VALIDATION_CONFIG = {
   MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
-  MIN_TEXT_LENGTH: 0, // Minimum characters for valid resume (disabled for testing)
+  MIN_TEXT_LENGTH: 50, // Minimum characters for valid resume
   MAX_TEXT_LENGTH: 100000, // Maximum characters to store
+  MIN_JOB_DESC_LENGTH: 20, // Minimum characters for job description
+  MAX_JOB_DESC_LENGTH: 50000, // Maximum characters for job description
   ALLOWED_EXTENSIONS: [".pdf", ".docx", ".txt"] as const,
   ALLOWED_MIME_TYPES: new Map<string, FileType>([
     ["application/pdf", "pdf"],
@@ -168,4 +170,29 @@ export async function validateUploadedFile(
   }
 
   return { valid: true, fileType: detectedType };
+}
+
+/**
+ * Validates job description text input
+ */
+export type JobDescValidationResult =
+  | { valid: true; text: string }
+  | { valid: false; error: string };
+
+export function validateJobDescription(text: string | null | undefined): JobDescValidationResult {
+  if (!text || text.trim().length === 0) {
+    return { valid: false, error: "Job description is required" };
+  }
+
+  const trimmed = text.trim();
+
+  if (trimmed.length < VALIDATION_CONFIG.MIN_JOB_DESC_LENGTH) {
+    return { valid: false, error: "Job description is too short" };
+  }
+
+  if (trimmed.length > VALIDATION_CONFIG.MAX_JOB_DESC_LENGTH) {
+    return { valid: false, error: "Job description is too long" };
+  }
+
+  return { valid: true, text: trimmed };
 }
