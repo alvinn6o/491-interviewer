@@ -7,7 +7,7 @@
 import type { InterviewItem } from "./interviewItem";
 import { CreateTestInterviewItems } from "./interviewItem";
 import { GetInterviewData } from "./overviewService";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function PageContent() {
     //helps type useState and provides placeholder
@@ -15,13 +15,19 @@ export function PageContent() {
 
     const [items, setItems] = useState(testItems);
 
-    //wrap in async func
-    //so we can call data fetch synchronously
-    //TODO: use real user's ID
-    (async () => {
-        const asyncItems = await GetInterviewData("test");
-        setItems(asyncItems);
-    })();
+    
+    //wrap in useEffect so that it only runs once on initial render
+    //else setItems causes it to run again in a loop
+    useEffect(() => {
+
+        //wrap in async func
+        //so we can call data fetch synchronously
+        (async () => {
+            const asyncItems = await GetInterviewData("cmj58pmnj0002qp2knai2dnjx"); //TODO: use real user's ID
+            setItems(asyncItems);
+        })();
+    }, []);
+
 
     return (
         <main>
@@ -61,13 +67,75 @@ function InterviewList({ items }: { items: InterviewItem[] }) {
     );
 }
 
-function InterviewItemBox({ item }: { item: InterviewItem}) {
+enum InterviewItemState {
+    DEFAULT,
+    OVERVIEW
+}
+
+function InterviewItemBox({ item } : { item: InterviewItem }) {
+
+    const [itemState, setItemState] = useState(InterviewItemState.DEFAULT);
+
+    let title = item.type.toString() == "TECHNICAL" ? "Technical Interview" : "Behavioral Interview";
+    let status = item.status.toString();
+
+    switch (status) {
+        case "COMPLETED":
+            status = "Completed";
+            break;
+        case "IN_PROGRESS":
+            status = "In Progress";
+            break;
+        case "ABANDONED":
+            status = "Abandoned";
+            break;
+    }
+
+    switch (itemState) {
+        case InterviewItemState.DEFAULT:
+            return (<InterviewItemDefault title={title} status={status} setState={setItemState} />);
+        case InterviewItemState.OVERVIEW:
+            return (<InterviewItemOverview title={title} status={status} setState={setItemState} />);
+    }
+}
+
+function InterviewItemDefault({ title, status, setState }: {
+    title: string;
+    status: string;
+    setState: React.Dispatch<React.SetStateAction<InterviewItemState>>;
+}) {
+
     return (
         <div className="p-1">
-            <h3>Interview</h3>
-            <div>{item.id.toString()}</div>
-            <div>{item.type.toString()}</div>
-            <div>{item.status.toString()}</div>
+            <span>
+                <div>
+                    <h3>{title}</h3>
+                    <div>{status}</div>
+                </div>
+                <div>
+                    <button onClick={() => setState(InterviewItemState.OVERVIEW) }>Overview</button>
+                </div>
+            </span>
+        </div>
+    );
+}
+
+function InterviewItemOverview({ title, status, setState }: {
+    title: string;
+    status: string;
+    setState: React.Dispatch<React.SetStateAction<InterviewItemState>>;
+}) {
+    return (
+        <div className="p-1">
+            <span>
+                <div>
+                    <h3>{title}</h3>
+                    <div>{status}</div>
+                </div>
+                <div>
+                    <button onClick={() => setState(InterviewItemState.DEFAULT)}>Close Overview</button>
+                </div>
+            </span>
         </div>
     );
 }
