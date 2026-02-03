@@ -1,13 +1,18 @@
 ﻿//Author: Brandon Christian
 //Date: 2/2/2026
+//Initial creation
+
+//Date 2/3/2026
+//Overview display
 
 
 "use client";
 
 import type { InterviewItem } from "./interviewItem";
 import { CreateTestInterviewItems } from "./interviewItem";
-import { GetInterviewData } from "./overviewService";
+import { GetCurrentUserInterviewData } from "./overviewService";
 import { useState, useEffect } from "react";
+import styles from "./test.module.css";
 
 export function PageContent() {
     //helps type useState and provides placeholder
@@ -23,7 +28,7 @@ export function PageContent() {
         //wrap in async func
         //so we can call data fetch synchronously
         (async () => {
-            const asyncItems = await GetInterviewData("cmj58pmnj0002qp2knai2dnjx"); //TODO: use real user's ID
+            const asyncItems = await GetCurrentUserInterviewData(); 
             setItems(asyncItems);
         })();
     }, []);
@@ -107,7 +112,7 @@ function InterviewItemDefault({ title, status, setState }: {
 
     return (
         <div className="p-1">
-            <span>
+            <div>
                 <div>
                     <h3>{title}</h3>
                     <div>{status}</div>
@@ -115,7 +120,8 @@ function InterviewItemDefault({ title, status, setState }: {
                 <div>
                     <button onClick={() => setState(InterviewItemState.OVERVIEW) }>Overview</button>
                 </div>
-            </span>
+            </div>
+            
         </div>
     );
 }
@@ -134,6 +140,23 @@ function InterviewItemOverview({ title, status, setState }: {
                 </div>
                 <div>
                     <button onClick={() => setState(InterviewItemState.DEFAULT)}>Close Overview</button>
+                </div>
+                <div className={`p-2 border rounded-md w-full`}>
+                    <div>Info: </div>
+                    <div className={`p-2 m-1 border rounded-md w-auto`}>
+                        <div>Date: 1-1-2026</div>
+                        <div>Duration: 3 minutes</div>
+                        <div>Score: 5</div>
+                    </div>
+                    <div>Feedback: </div>
+                    <div className={`p-2 m-1 border rounded-md w-auto`}>
+
+                        <div>This is the content of your feedback. It might be pretty long or it might be short.
+                            I don't really know. It's AI Generated after all! This is the content of your feedback. It might be pretty long or it might be short.
+                            I don't really know. It's AI Generated after all! This is the content of your feedback. It might be pretty long or it might be short.
+                            I don't really know. It's AI Generated after all!</div>
+                    </div>
+
                 </div>
             </span>
         </div>

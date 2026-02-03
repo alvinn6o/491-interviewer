@@ -1,7 +1,8 @@
 ﻿//Author: Brandon Christian
 //Date: 2/2/2026
 
-//TODO: format to match actual interview data structure
+
+
 export type InterviewItem = {
     id: number,
     type: string,
