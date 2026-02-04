@@ -74,20 +74,32 @@ export default function TechnicalInterviewViewSwitcher() {
     setPageState(TIPageState.ACTIVE);
   }
 
-    function runCode() {
-    // Fake execution
-    setOutput("This is a temporary output!");
-    const didPass = code.includes("+"); // Code contains "+" = pass
-    setPassed(didPass);
+    // Judge0 language IDs
+    const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
+      python: 71,  // Python 3
+      cpp: 54,     // C++ (GCC 9.2.0)
+    };
 
-    if (didPass) {
-        setQuestionStatus((prev) => {
-        const updated = [...prev];
-        updated[currentQuestionIndex] = true; // mark complete
-        return updated;
-        });
+    function runCode() {
+      // Package code for Judge0 submission
+      const payload = {
+        source_code: code,
+        language_id: JUDGE0_LANGUAGE_IDS[language],
+        // stdin: "", // Will be populated with test case input later
+      };
+
+      // Display the payload for verification (will be sent to backend later)
+      setOutput(JSON.stringify(payload, null, 2));
+
+      // TODO: Replace with actual API call to backend
+      // const response = await fetch("/api/judge", {
+      //   method: "POST",
+      //   body: JSON.stringify({ ...payload, problemId: questions[currentQuestionIndex].id }),
+      // });
+
+      // Temporary pass logic for demo
+      setPassed(null);
     }
-}
 
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60);
@@ -190,12 +202,13 @@ export default function TechnicalInterviewViewSwitcher() {
           {/* Code + Output */}
           <div className="max-w-4xl mx-auto grid grid-cols-2 gap-6 mt-6">
             <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2">Input</h3>
-              <textarea
-                className="w-full h-48 border rounded p-2 font-mono text-sm"
+              <h3 className="font-semibold mb-2">Code</h3>
+              <CodeEditor
+                language={language}
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="Write your code here..."
+                onChange={setCode}
+                onLanguageChange={handleLanguageChange}
+                height="300px"
               />
               <button
                 onClick={runCode}
@@ -206,9 +219,9 @@ export default function TechnicalInterviewViewSwitcher() {
             </div>
 
             <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2">Results</h3>
-              <pre className="bg-gray-100 h-32 p-2 rounded text-sm">
-                {output || "Output will appear here"}
+              <h3 className="font-semibold mb-2">Results (Judge0 Payload)</h3>
+              <pre className="bg-gray-100 h-64 p-2 rounded text-sm overflow-auto whitespace-pre-wrap">
+                {output || "Click 'Run Code' to see test of results sent to backend"}
               </pre>
 
               <div className="mt-4 text-sm">
