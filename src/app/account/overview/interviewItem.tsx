@@ -4,7 +4,7 @@
 
 
 export type InterviewItem = {
-    id: number,
+    id: string,
     type: string,
     status: string
 }
@@ -36,4 +36,20 @@ function SessionToItem(session: any)
 
     return item;
 
+}
+
+export type ReportItem = {
+    summary: string,
+    isFavorite: boolean,
+    createdAt: any
+}
+
+export function CreateTestReport() {
+    const item: ReportItem = { summary: "No report found", isFavorite: false, createdAt: Date.now() }; 
+    return item;
+}
+
+export function InteriewReportToReportItem(report: any) {
+    const item: ReportItem = { summary: report.summary, isFavorite: report.isFavorite, createdAt: report.createdAt };
+    return item;
 }

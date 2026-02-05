@@ -8,11 +8,10 @@
 
 "use client";
 
-import type { InterviewItem } from "./interviewItem";
-import { CreateTestInterviewItems } from "./interviewItem";
-import { GetCurrentUserInterviewData } from "./overviewService";
+import type { InterviewItem, ReportItem } from "./interviewItem";
+import { CreateTestInterviewItems, CreateTestReport } from "./interviewItem";
+import { GetCurrentUserInterviewData, GetSessionReportData } from "./overviewService";
 import { useState, useEffect } from "react";
-import styles from "./test.module.css";
 
 export function PageContent() {
     //helps type useState and provides placeholder
@@ -83,6 +82,7 @@ function InterviewItemBox({ item } : { item: InterviewItem }) {
 
     let title = item.type.toString() == "TECHNICAL" ? "Technical Interview" : "Behavioral Interview";
     let status = item.status.toString();
+    let id = item.id;
 
     switch (status) {
         case "COMPLETED":
@@ -100,7 +100,7 @@ function InterviewItemBox({ item } : { item: InterviewItem }) {
         case InterviewItemState.DEFAULT:
             return (<InterviewItemDefault title={title} status={status} setState={setItemState} />);
         case InterviewItemState.OVERVIEW:
-            return (<InterviewItemOverview title={title} status={status} setState={setItemState} />);
+            return (<InterviewItemOverview title={title} status={status} setState={setItemState} sessionID={id} />);
     }
 }
 
@@ -126,11 +126,39 @@ function InterviewItemDefault({ title, status, setState }: {
     );
 }
 
-function InterviewItemOverview({ title, status, setState }: {
+function InterviewItemOverview({ title, status, setState, sessionID }: {
     title: string;
     status: string;
     setState: React.Dispatch<React.SetStateAction<InterviewItemState>>;
+    sessionID: string;
 }) {
+
+    //TODO: change view when loading or errored
+    const testReport: ReportItem = CreateTestReport();
+    const [report, setReport] = useState(testReport);
+    const [loaded, setLoaded] = useState(false);
+    const [error, setError] = useState(null);
+
+    //wrap in useEffect so that it only runs once on initial render
+    //else setReport causes it to run again in a loop
+    useEffect(() => {
+
+        //wrap in async func
+        //so we can call data fetch synchronously
+        (async () => {
+            const asyncReport = await GetSessionReportData(sessionID);
+
+            if (asyncReport.error)
+                setError(asyncReport.error)
+            else {
+                setReport(asyncReport);
+                setLoaded(true);
+            }
+            
+        })();
+    }, []);
+
+
     return (
         <div className="p-1">
             <span>
@@ -142,23 +170,35 @@ function InterviewItemOverview({ title, status, setState }: {
                     <button onClick={() => setState(InterviewItemState.DEFAULT)}>Close Overview</button>
                 </div>
                 <div className={`p-2 border rounded-md w-full`}>
-                    <div>Info: </div>
-                    <div className={`p-2 m-1 border rounded-md w-auto`}>
-                        <div>Date: 1-1-2026</div>
-                        <div>Duration: 3 minutes</div>
-                        <div>Score: 5</div>
-                    </div>
-                    <div>Feedback: </div>
-                    <div className={`p-2 m-1 border rounded-md w-auto`}>
 
-                        <div>This is the content of your feedback. It might be pretty long or it might be short.
-                            I don't really know. It's AI Generated after all! This is the content of your feedback. It might be pretty long or it might be short.
-                            I don't really know. It's AI Generated after all! This is the content of your feedback. It might be pretty long or it might be short.
-                            I don't really know. It's AI Generated after all!</div>
-                    </div>
+                    {error ? (
+                        <div>{error}</div>
+                    ) : loaded ? (
+                        <ReportBox report={report} />
+                    ) : (
+                        <div>Loading Report...</div>
+                    )}
 
                 </div>
             </span>
         </div>
     );
+    
+}
+
+function ReportBox({ report }: { report: ReportItem }) {
+    return (
+        <div>
+            <div>Info: </div>
+            <div className={`p-2 m-1 border rounded-md w-auto`}>
+                <div>Date: {report.createdAt.toString()}</div>
+                <div>Favorited: {report.isFavorite.toString()}</div>
+                <div>Score: TODO</div>
+            </div>
+            <div>Feedback: </div>
+            <div className={`p-2 m-1 border rounded-md w-auto`}>
+                <div>{report.summary}</div>
+            </div>
+        </div>
+    )
 }
