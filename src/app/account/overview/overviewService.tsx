@@ -5,7 +5,11 @@
 //Date: 2/3/2026
 //Change to non-dynamic route and remove userID param
 
-import { InterviewSessionsToInterviewItems, InteriewReportToReportItem, CreateTestReport } from "./interviewItem";
+//Date: 2/5/2026
+//Obsoleted report query
+
+import { InterviewSessionsToInterviewItems } from "./interviewItem";
+//import { InteriewReportToReportItem, CreateTestReport } from "./interviewItem";
 
 
 export async function GetCurrentUserInterviewData() {
@@ -21,6 +25,7 @@ export async function GetCurrentUserInterviewData() {
     return items;
 }
 
+/* DEPRECATED
 export async function GetSessionReportData(sessionID: string) {
     const response = await fetch(`/api/interview/report/${sessionID}`, {
         method: "GET"
@@ -40,5 +45,5 @@ export async function GetSessionReportData(sessionID: string) {
     const item = InteriewReportToReportItem(report);
 
     return item;
-}
+}*/
 

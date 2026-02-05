@@ -1,12 +1,21 @@
 ﻿//Author: Brandon Christian
 //Date: 2/2/2026
+//Initial Creation
 
+//Date: 2/5/2026
+//Obsoleted report
 
 
 export type InterviewItem = {
     id: string,
     type: string,
-    status: string
+    status: string,
+    startedAt: number,
+    completedAt: number | null,
+    isFavorite: boolean,
+    feedback: any | null,
+    responses: any[] | null,
+    overallScore: number | null
 }
 
 export function CreateTestInterviewItems()
@@ -32,12 +41,24 @@ export function InterviewSessionsToInterviewItems(sessions: any[]) {
 
 function SessionToItem(session: any)
 {
-    const item: InterviewItem = {id: session.id, type: session.type, status: session.status };
+    const item: InterviewItem = {
+        id: session.id,
+        type: session.type, 
+        status: session.status,
+        isFavorite: session.isFavorite ? session.isFavorite : false, //TODO: add isFavorite column to InterviewSession table in DB
+        startedAt: session.startedAt,
+        completedAt: session.completedAt,
+        feedback: session.feedback,
+        responses: session.responses,
+        overallScore: session.overallScore
+    };
 
     return item;
 
 }
 
+//DEPRECATED BELOW THIS LINE
+/*
 export type ReportItem = {
     summary: string,
     isFavorite: boolean,
@@ -52,4 +73,4 @@ export function CreateTestReport() {
 export function InteriewReportToReportItem(report: any) {
     const item: ReportItem = { summary: report.summary, isFavorite: report.isFavorite, createdAt: report.createdAt };
     return item;
-}
+}*/

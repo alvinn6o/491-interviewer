@@ -3,10 +3,10 @@
 
 
 "use client";
-import { PageContent } from "./view";
+import { DisplayInterviewList } from "./displayInterviewList";
 
 export default function InterviewOverview() {
     return (
-        <PageContent />
+        <DisplayInterviewList />
     );
 }
