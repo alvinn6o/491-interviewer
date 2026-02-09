@@ -38,6 +38,7 @@ export default function TechnicalInterviewViewSwitcher() {
   const [code, setCode] = useState(getStarterCode("python"));
   const [output, setOutput] = useState("");
   const [passed, setPassed] = useState<boolean | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
 
   // Reset code to starter when language changes
   function handleLanguageChange(newLang: SupportedLanguage) {
@@ -74,31 +75,63 @@ export default function TechnicalInterviewViewSwitcher() {
     setPageState(TIPageState.ACTIVE);
   }
 
-    // Judge0 language IDs
-    const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
-      python: 71,  // Python 3
-      cpp: 54,     // C++ (GCC 9.2.0)
-    };
+    async function runCode() {
+      setIsRunning(true);
+      setOutput("Executing code...");
+      setPassed(null);
 
-    function runCode() {
-      // Package code for Judge0 submission
       const payload = {
         source_code: code,
-        language_id: JUDGE0_LANGUAGE_IDS[language],
-        // stdin: "", // Will be populated with test case input later
+        language: language, // Piston uses language name directly
       };
 
-      // Display the payload for verification (will be sent to backend later)
-      setOutput(JSON.stringify(payload, null, 2));
+      try {
+        const response = await fetch("/api/judge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-      // TODO: Replace with actual API call to backend
-      // const response = await fetch("/api/judge", {
-      //   method: "POST",
-      //   body: JSON.stringify({ ...payload, problemId: questions[currentQuestionIndex].id }),
-      // });
+        const result = await response.json();
 
-      // Temporary pass logic for demo
-      setPassed(null);
+        if (!response.ok) {
+          setOutput(`Error: ${result.error}`);
+          setPassed(false);
+          return;
+        }
+
+        // Format the output
+        let outputText = "";
+        outputText += `Status: ${result.status}\n`;
+        outputText += `Time: ${result.time || "N/A"}s\n`;
+        outputText += `Memory: ${result.memory || "N/A"} KB\n`;
+        outputText += `─────────────────────\n`;
+
+        if (result.compile_output) {
+          outputText += `Compile Output:\n${result.compile_output}\n`;
+        }
+        if (result.stdout) {
+          outputText += `stdout:\n${result.stdout}\n`;
+        }
+        if (result.stderr) {
+          outputText += `stderr:\n${result.stderr}\n`;
+        }
+        if (!result.stdout && !result.stderr && !result.compile_output) {
+          outputText += "(No output)";
+        }
+
+        setOutput(outputText);
+
+        // Mock pass/fail based on execution status
+        const isAccepted = result.status === "Accepted";
+        setPassed(isAccepted);
+
+      } catch (error) {
+        setOutput(`Error: ${error instanceof Error ? error.message : "Failed to execute"}`);
+        setPassed(false);
+      } finally {
+        setIsRunning(false);
+      }
     }
 
   function formatTime(seconds: number) {
@@ -212,16 +245,19 @@ export default function TechnicalInterviewViewSwitcher() {
               />
               <button
                 onClick={runCode}
-                className="mt-3 bg-orange-500 text-white px-4 py-1 rounded"
+                disabled={isRunning}
+                className={`mt-3 px-4 py-1 rounded text-white ${
+                  isRunning ? "bg-gray-400 cursor-not-allowed" : "bg-orange-500 hover:bg-orange-600"
+                }`}
               >
-                Run Code
+                {isRunning ? "Running..." : "Run Code"}
               </button>
             </div>
 
             <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2">Results (Judge0 Payload)</h3>
+              <h3 className="font-semibold mb-2">Execution Output</h3>
               <pre className="bg-gray-100 h-64 p-2 rounded text-sm overflow-auto whitespace-pre-wrap">
-                {output || "Click 'Run Code' to see test of results sent to backend"}
+                {output || "Click 'Run Code' to execute your code"}
               </pre>
 
               <div className="mt-4 text-sm">
