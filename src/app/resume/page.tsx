@@ -13,33 +13,63 @@ import type { ReactNode } from "react";
 //  Functionality
 //-------------------------------------
 
-async function OnUploadResumeClicked(): Promise<string>  {
+interface UploadResult {
+    success: true;
+    fileName: string;
+    extractedText: string;
+    textLength: number;
+}
 
+interface UploadError {
+    success: false;
+    error: string;
+}
+
+type UploadResponse = UploadResult | UploadError;
+
+async function OnUploadResumeClicked(): Promise<UploadResponse> {
     try {
         const file = await WaitForFile();
         console.log("Selected file:", file);
 
-        //TODO:
-        //Send file to Server
+        // Send file to server
+        const formData = new FormData();
+        formData.append("file", file);
 
+        const response = await fetch("/api/resume/upload", {
+            method: "POST",
+            body: formData,
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            return {
+                success: false,
+                error: result.error?.message || "Upload failed",
+            };
+        }
+
+        return {
+            success: true,
+            fileName: result.data.fileName,
+            extractedText: result.data.extractedText,
+            textLength: result.data.textLength,
+        };
     } catch (err) {
-        console.error(err);
-
-        //TODO: dont advance if upload failed
+        console.error("Upload error:", err);
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Upload failed",
+        };
     }
-
-    return new Promise((resolve) => {
-        setTimeout(() => resolve("Upload complete!"), 10);
-    });
-
-    
-};
+}
 
 export async function WaitForFile(): Promise<File> {
     return new Promise((resolve, reject) => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".pdf,.doc,.docx,.txt";
+        input.accept = ".pdf,.docx,.txt";
 
         input.onchange = () => {
             const file = input.files?.item(0);
@@ -166,13 +196,32 @@ function ViewSwitcher() {
 
     const [feedbackData, setFeedbackData] = useState(test_items);
 
-   
+    // Store extracted resume text for later use in ATS scoring
+    const [resumeText, setResumeText] = useState<string>("");
+    const [resumeFileName, setResumeFileName] = useState<string>("");
+
+
     switch (uploadState) {
         case UploadPageState.UPLOAD:
-            return (<UploadBox changeState={setUploadState} />);
+            return (
+                <UploadBox
+                    changeState={setUploadState}
+                    onResumeUploaded={(text, fileName) => {
+                        setResumeText(text);
+                        setResumeFileName(fileName);
+                    }}
+                />
+            );
 
         case UploadPageState.ADD_JOB_DESC:
-            return (<AddJobDescriptionBox changeState={setUploadState} changeFeedbackData={setFeedbackData} />);
+            return (
+                <AddJobDescriptionBox
+                    changeState={setUploadState}
+                    changeFeedbackData={setFeedbackData}
+                    resumeText={resumeText}
+                    resumeFileName={resumeFileName}
+                />
+            );
 
         case UploadPageState.FEEDBACK:
             return (<ViewFeedbackBox changeState={setUploadState} data={feedbackData} />);
@@ -211,18 +260,38 @@ function Instructions() {
     )
 }
 
-function UploadBox({ changeState }: { changeState: React.Dispatch<React.SetStateAction<UploadPageState>> })  {
+function UploadBox({
+    changeState,
+    onResumeUploaded,
+}: {
+    changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
+    onResumeUploaded: (text: string, fileName: string) => void;
+}) {
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const UploadResumeButton = async () => {
-        try {
-            //Try and Wait For Upload
-            const result = await OnUploadResumeClicked(); 
-            console.log(result);
+        setError(null);
+        setIsLoading(true);
 
-            //Change state if successful
-            changeState(UploadPageState.ADD_JOB_DESC); 
-        } catch (error) {
-            OnFailedUpload();
+        try {
+            const result = await OnUploadResumeClicked();
+
+            if (!result.success) {
+                setError(result.error);
+                return;
+            }
+
+            console.log("Upload successful:", result.fileName, `(${result.textLength} chars)`);
+
+            // Store the extracted text and advance state
+            onResumeUploaded(result.extractedText, result.fileName);
+            changeState(UploadPageState.ADD_JOB_DESC);
+        } catch (err) {
+            setError("An unexpected error occurred");
+            console.error(err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -231,8 +300,19 @@ function UploadBox({ changeState }: { changeState: React.Dispatch<React.SetState
             <br />
             <h2>Upload Your Resume</h2>
             <h1>↑</h1>
-            <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
-            <p className="sub-description">.pdf or .docx file</p>
+            {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2">
+                    {error}
+                </div>
+            )}
+            <button
+                className="orange_button"
+                onClick={UploadResumeButton}
+                disabled={isLoading}
+            >
+                {isLoading ? "Uploading..." : "Upload Resume"}
+            </button>
+            <p className="sub-description">.pdf, .docx, or .txt file</p>
         </div>
     )
 }
@@ -245,12 +325,16 @@ enum JobDescriptionTemplate
 }
 
 function AddJobDescriptionBox(
-    { changeState, changeFeedbackData } :
+    { changeState, changeFeedbackData, resumeText, resumeFileName } :
         {
             changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
             changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
+            resumeText: string;
+            resumeFileName: string;
         }
 ) {
+    // Log resume info for debugging (will be used for ATS scoring in later tasks)
+    console.log("Resume ready for analysis:", resumeFileName, `(${resumeText.length} chars)`);
 
     const AddJobDescButton = async () => {
         try {
