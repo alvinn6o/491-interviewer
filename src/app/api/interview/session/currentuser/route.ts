@@ -25,6 +25,9 @@ export async function GET(
             where: {
                 userId: id,
             },
+            include: {
+                responses: true,
+            }
         });
 
         return NextResponse.json(sessions);

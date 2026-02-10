@@ -12,6 +12,7 @@
 
 import type { InterviewItem } from "./interviewItem";
 import { useState } from "react";
+import type { InterviewResponse } from "./interviewResponse";
 
 
 enum InterviewItemState {
@@ -124,8 +125,14 @@ function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem 
                 </div>
             )}
 
-            {interviewItem.responses && (
-                <InterviewResponsesBox responses={interviewItem.responses}/>
+            {interviewItem.responses && interviewItem.responses.length > 0 && (
+                <div>
+                    <div>Responses: </div>
+                    <div className={`p-2 m-1 border rounded-md w-auto`}>
+                        <InterviewResponseList responses={interviewItem.responses} />
+                    </div>
+                </div>
+
             )}
 
             
@@ -133,8 +140,32 @@ function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem 
     )
 }
 
-function InterviewResponsesBox({ responses }: { responses: any[] | null }) {
-    return (<div>TODO:</div>)
+function InterviewResponseList({ responses }: { responses: InterviewResponse[] }) {
+    return (
+        <div>
+            {responses?.map(
+                (resp, i) => (
+                    <div key={`${i}`}>
+                        <InterviewResponseBox response={resp} />
+                    </div>
+                )
+            )}
+        </div>
+    );
+}
+
+function InterviewResponseBox({ response }: { response: InterviewResponse }) {
+    return (
+        <div className={`p-2 m-1 border rounded-md w-auto`}>
+            <ul>
+                <li>Question: {response.question}</li>
+                <li>Answer: {response.answer}</li>
+                <li>Answer Date: {response.answeredAt}</li>
+                {response.score && (<li>Score: {response.score}</li>)}
+                {response.feedback && (<li>Feedback: {response.feedback}</li>)}
+            </ul>
+        </div>
+    );
 }
 
 //DEPRECATED BELOW THIS LINE

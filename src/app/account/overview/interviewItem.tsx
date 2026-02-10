@@ -4,7 +4,8 @@
 
 //Date: 2/5/2026
 //Obsoleted report
-
+import type { InterviewResponse } from "./interviewResponse";
+import { SessionResponseToInterviewResponses } from "./interviewResponse";
 
 export type InterviewItem = {
     id: string,
@@ -14,19 +15,27 @@ export type InterviewItem = {
     completedAt: number | null,
     isFavorite: boolean,
     feedback: any | null,
-    responses: any[] | null,
+    responses: InterviewResponse[] | null,
     overallScore: number | null
 }
 
-export function CreateTestInterviewItems()
-{
+export function CreateTestInterviewItems() {
     const items: InterviewItem[] = new Array(1);
 
-    items.push({ id: 0, type: "INTERVIEWS", status: "LOADING" });
+    items.push({
+        id: "0",
+        type: "INTERVIEWS",
+        status: "LOADING",
+        startedAt: 0,
+        completedAt: null,
+        isFavorite: false,
+        feedback: null,
+        responses: null,
+        overallScore: null
+    });
 
     return items;
 }
-
 export function InterviewSessionsToInterviewItems(sessions: any[]) {
     const items: InterviewItem[] = new Array(sessions.length);
 
@@ -49,7 +58,7 @@ function SessionToItem(session: any)
         startedAt: session.startedAt,
         completedAt: session.completedAt,
         feedback: session.feedback,
-        responses: session.responses,
+        responses: SessionResponseToInterviewResponses(session.responses),
         overallScore: session.overallScore
     };
 
