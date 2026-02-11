@@ -18,9 +18,9 @@ export default function ForgotPasswordPage(){
         setLoading(true);
 
         try {
-            const res = await fetch("/api/auth/forgot-password", {
+            const res = await fetch("/api/forgot-password", {
                 method: "POST",
-                headers: {"Content-Type": "applyication/json" },
+                headers: {"Content-Type": "application/json" },
                 body: JSON.stringify({ email }),
             });
 
@@ -31,8 +31,7 @@ export default function ForgotPasswordPage(){
                 setError(data.error || "We couldn't find an account with that email.");
             }
         } catch (err) {
-            //TEMP
-            setSubmitted(true);
+            setError("Couldn't connect to the server.");
         } finally {
             setLoading(false);
         }
