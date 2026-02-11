@@ -1,6 +1,7 @@
 ﻿//Author: Brandon Christian
 //Date: 12/12/2025
 
+//TODO: Lockout upload buttons while uploading
 
 "use client";
 import { useState } from "react";
@@ -111,12 +112,14 @@ function UploadBox({ changeState, changeResumeText }: {
     const UploadResumeButton = async () => {
         try {
             //Try and Wait For Upload
-            const result = await OnUploadResumeClicked(); //TODO: use real result not success msg save resume text 
+            const result = await OnUploadResumeClicked();
             console.log(result);
+            changeResumeText(result);
 
             //Change state if successful
             changeState(UploadPageState.ADD_JOB_DESC); 
-        } catch (error) {
+        } catch (error: any) {
+            console.log(error);
             OnFailedUpload();
         }
     };
@@ -156,7 +159,8 @@ function AddJobDescriptionBox(
             //Change state if successful
             changeState(UploadPageState.FEEDBACK);
             changeFeedbackData(result);
-        } catch (error) {
+        } catch (error: any) {
+            console.log(error);
             OnFailedUpload();
         }
     };

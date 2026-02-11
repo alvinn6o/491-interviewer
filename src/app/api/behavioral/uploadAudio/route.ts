@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     //extract the audio from the formData sent
     const formData = await req.formData();
-    const audio = formData.get("audio");
+    const audio = formData.get("audio") as File;
 
     if (!audio || !(audio instanceof File)) {
         return NextResponse.json(

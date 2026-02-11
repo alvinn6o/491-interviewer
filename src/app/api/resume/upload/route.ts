@@ -1,36 +1,44 @@
 //Author: Brandon Christian
 //Date: 2/10/2026
+//resume/upload
 
 import { NextRequest, NextResponse } from "next/server";
 import { ProcessFileToText } from "./fileProcess";
 
 export async function POST(req: NextRequest) {
+    console.log("Route hit");
 
     //extract the audio from the formData sent
     const formData = await req.formData();
-    const file = formData.get("file");
+    console.log("Got formData");
 
-    if (!file || !(file instanceof File)) {
+    const file = formData.get("file") as File;;
+    console.log("File:", file);
+
+    if (!file) {
+        console.log("No file found");
         return NextResponse.json(
-            { error: "No file received" },
+            { error: "No file received for resume/upload" },
             { status: 400 }
         );
     }
 
     try {
+        console.log("POSTED resume/uploa");
+
         const text = await ProcessFileToText(file);
 
-        console.log("POSTED resume to text");
+        console.log("Processed file to text");
         console.log(text);
 
         //send to resumeService.ts
         //send back to client so that it can be sent together with the job desc
         //to be uploaded at a different end point
-        return NextResponse.json({ content: text, success: true });
+        return NextResponse.json(text);
     }
-    catch (err) {
+    catch (err : any) {
         return NextResponse.json(
-            { error: err },
+            { error: err?.message || "Something went wrong" },
             { status: 400 }
         );
     }

@@ -3,20 +3,23 @@
 //Initial Creation
 
 
-export async function SendResumeToServer(fileData: File) {
+export async function SendResumeToServer(file: File) {
 
     const formData = new FormData();
 
     formData.append(
-        "audio",
-        fileData,
-        `${fileData.name}`
+        "file",
+        file
     );
+
+    console.log("sending file to server")
 
     const response = await fetch("/api/resume/upload", {
         method: "POST",
         body: formData
     });
+
+    
 
     return response;
 }

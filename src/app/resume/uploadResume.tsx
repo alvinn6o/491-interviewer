@@ -4,7 +4,8 @@
 
 import { SendResumeToServer, SendResumeTextAndJobDescToServer } from "./resumeService";
 import type { FeedbackItem } from "./feedbackItem"
-import  { FeedbackCategory  } from "./feedbackItem"
+import { FeedbackCategory } from "./feedbackItem"
+import type { Dict } from "@trpc/server";
 
 
 export async function OnUploadResumeClicked(): Promise<string>  { 
@@ -13,18 +14,17 @@ export async function OnUploadResumeClicked(): Promise<string>  {
         const file = await WaitForFile();
         console.log("Selected file:", file);
 
-
         const resp = await SendResumeToServer(file);
+        const text = await resp.json();
+
+        return new Promise((resolve) => {
+            setTimeout(() => resolve(text), 10);
+        });
 
     } catch (err) {
         console.error(err);
         throw err;
     }
-
-    return new Promise((resolve) => {
-        setTimeout(() => resolve("Upload complete!"), 10);//TODO: send actual resp back 
-    });
-
     
 };
 
@@ -38,10 +38,13 @@ async function WaitForFile(): Promise<File> {
             const file = input.files?.item(0);
 
             if (!file) {
+                console.log("no file or bad file selected")
                 reject(new Error("No file selected"));
                 return;
             }
 
+            console.log("resolving with file -->")
+            console.log(file.name);
             resolve(file);
         };
 
@@ -78,12 +81,24 @@ export async function OnAddJobDescriptionClicked(resumeText: string, jobDesc: st
 
         { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 1", description: "RECRUITER_TIPS Lorem Ipsum 1", status: true },
         { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 2", description: "RECRUITER_TIPS Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 3", description: "RECRUITER_TIPS Lorem Ipsum 3", status: true },
-
-        { key: FeedbackCategory.KEYWORDS, name: "Item 1", description: "KEYWORDS Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.KEYWORDS, name: "Item 2", description: "KEYWORDS Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.KEYWORDS, name: "Item 3", description: "KEYWORDS Lorem Ipsum 3", status: true }
+        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 3", description: "RECRUITER_TIPS Lorem Ipsum 3", status: true }
     ];
+
+    //For testing purposes, add the tokens to the list of keywords
+    const tokensByCount: Dict<number> = await response.json();
+
+    console.log(tokensByCount);
+    
+    Object.entries(tokensByCount).forEach(
+        ([token, value]) => {
+
+            if (value) {
+                const item: FeedbackItem = { key: FeedbackCategory.KEYWORDS, name: token, description: value.toString(), status: true };
+                test_items.push(item);
+            }
+                
+        }
+    );
 
     //return stub promise
     return new Promise((resolve) => {

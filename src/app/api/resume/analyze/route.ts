@@ -1,7 +1,9 @@
 //Author: Brandon Christian
 //Date: 2/10/2026
+//resume/analyze
 
 import { NextRequest, NextResponse } from "next/server";
+import { ProcessTextToTokens } from "../../behavioral/uploadAudio/audioProcess"
 
 export async function POST(req: NextRequest) {
 
@@ -20,6 +22,8 @@ export async function POST(req: NextRequest) {
     console.log("Posted job and resume to server ")
     //TODO Process text through resume analysis server
 
-    return NextResponse.json({ success: true });
+    const resumeTokensByCount = ProcessTextToTokens(resumeText.toString())
+
+    return NextResponse.json(resumeTokensByCount);
 
 }
