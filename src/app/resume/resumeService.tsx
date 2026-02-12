@@ -19,8 +19,6 @@ export async function SendResumeToServer(file: File) {
         body: formData
     });
 
-    
-
     return response;
 }
 

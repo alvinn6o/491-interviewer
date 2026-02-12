@@ -13,11 +13,14 @@ export async function POST(req: NextRequest) {
     const jobDescText = formData.get("jobDesc");
 
     if (!resumeText || !jobDescText) {
+
         return NextResponse.json(
             { error: "missing resume text or job desc text" },
             { status: 400 }
         );
+        
     }
+    
 
     console.log("Posted job and resume to server ")
     //TODO Process text through resume analysis server

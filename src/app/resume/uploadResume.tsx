@@ -15,6 +15,7 @@ export async function OnUploadResumeClicked(): Promise<string>  {
         console.log("Selected file:", file);
 
         const resp = await SendResumeToServer(file);
+
         const text = await resp.json();
 
         return new Promise((resolve) => {

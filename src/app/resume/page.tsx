@@ -109,10 +109,24 @@ function UploadBox({ changeState, changeResumeText }: {
     changeResumeText: React.Dispatch<React.SetStateAction<string>>;
 }) {
 
+    const [isEmpty, setEmpty] = useState(false);
+    const [isLoading, setLoading] = useState(false);
+
     const UploadResumeButton = async () => {
         try {
             //Try and Wait For Upload
+            setLoading(true);
+
             const result = await OnUploadResumeClicked();
+
+            setLoading(false);
+
+            //Disallow empty
+            if (result == "") {
+                setEmpty(true);
+                return;
+            }
+
             console.log(result);
             changeResumeText(result);
 
@@ -129,8 +143,27 @@ function UploadBox({ changeState, changeResumeText }: {
             <br />
             <h2>Upload Your Resume</h2>
             <h1>↑</h1>
-            <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
-            <p className="sub-description">.pdf or .docx file</p>
+
+            {isLoading && (
+                <div>
+                Uploading...
+                </div>
+            )}
+
+            {!isLoading && (
+                <div className={`${styles.centered_column}`}>
+                    <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
+                    <p className="sub-description">.pdf, .txt, or .docx file</p>
+
+                    {isEmpty && (
+                        <div>
+                            Resume was empty. Please upload a document with text.
+                        </div>)}
+                </div>
+
+            )}
+
+            
         </div>
     )
 }
@@ -151,10 +184,23 @@ function AddJobDescriptionBox(
         }
 ) {
 
+    const [isEmpty, setEmpty] = useState(false);
+    const [isLoading, setLoading] = useState(false);
+
     const AddJobDescButton = async () => {
         try {
+            //Disallow empty
+            if (template == "") {
+                setEmpty(true);
+                return;
+            }
+
+            setLoading(true);
+
             //Wait For Upload
             const result = await OnAddJobDescriptionClicked(resumeText, template);
+
+            setLoading(false);
 
             //Change state if successful
             changeState(UploadPageState.FEEDBACK);
@@ -169,26 +215,45 @@ function AddJobDescriptionBox(
 
     return (
         <div style={{ width: '50%' }} className={`${styles.centered_column} rounded outline-2`}>
-            <br/>
+            <br />
             <h2>Add Job Description</h2>
-            <textarea
-                style={{ width: '90%', height: '150px' }}
-                className="outline-1"
-                placeholder="Enter job description..."
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-            />
-            <span className={styles.centered_row}>
-                <span>
-                    <label htmlFor="templates">Templates: </label>
-                    <select name="Templates" id="templates" className="outline-1" onChange={(e) => setTemplate(e.target.value) }>
-                        <option value={JobDescriptionTemplate.NONE}>None</option>
-                        <option value={JobDescriptionTemplate.SOFTWARE_ENGINEER}>Software Engineer</option>
-                        <option value={JobDescriptionTemplate.DATA_SCIENTIST}>Data Scientist</option>
-                    </select>
-                </span>
-                <button type="submit" onClick={AddJobDescButton} className="orange_button">Add Job Description</button>
-            </span>
+            {isLoading && (
+                <div>
+                    Uploading...
+                </div>
+            )}
+
+            {!isLoading && (
+                <div className={`${styles.centered_column}`}>
+                    <textarea
+                        style={{ width: '90%', height: '150px' }}
+                        className="outline-1"
+                        placeholder="Enter job description..."
+                        value={template}
+                        onChange={(e) => setTemplate(e.target.value)}
+                    />
+                    <span className={styles.centered_row}>
+                        <div>
+                            <label htmlFor="templates">Templates: </label>
+                            <select name="Templates" id="templates" className="outline-1" onChange={(e) => setTemplate(e.target.value)}>
+                                <option value={JobDescriptionTemplate.NONE}>None</option>
+                                <option value={JobDescriptionTemplate.SOFTWARE_ENGINEER}>Software Engineer</option>
+                                <option value={JobDescriptionTemplate.DATA_SCIENTIST}>Data Scientist</option>
+                            </select>
+                        </div>
+                        <button type="submit" onClick={AddJobDescButton} className="orange_button">Add Job Description</button>
+
+                       
+
+                    </span>
+                    {isEmpty && (
+                        <div>
+                            Job description is empty. Please enter a description or choose a template.
+                        </div>
+                    )}
+                </div>
+            ) }
+           
             <br/>
         </div>
 
