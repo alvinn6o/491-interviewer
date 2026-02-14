@@ -1,5 +1,7 @@
-﻿//Author: Brandon Christian
-//Date: 12/12/2025
+﻿// Author: Dylan Hartley
+// Original by Brandon Christian (12/12/2025)
+// Rewritten and expanded: resume upload flow, job-description input,
+// ATS scoring integration, and feedback display.
 
 
 "use client";

@@ -1,4 +1,7 @@
-﻿.centered_row {
+﻿/* Resume page layout styles — flexbox utilities and
+   the numbered-circle component used in the instructions bar. */
+
+.centered_row {
     @apply flex flex-row items-center;
     gap: 50px;
 }

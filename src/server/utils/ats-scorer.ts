@@ -10,8 +10,6 @@
  *   4. Soft Skills              (10%)  — leadership, communication, etc.
  *   5. Tools & Certifications   (10%)  — specific platforms, certs
  *
- * Each dimension produces a 0–100 sub-score. The final ATS score is the
- * weighted sum, clamped to 0–100.
  */
 
 import {
