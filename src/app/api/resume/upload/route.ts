@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-        console.log("POSTED resume/uploa");
+        console.log("POSTED resume/uploap");
 
         const text = await ProcessFileToText(file);
 

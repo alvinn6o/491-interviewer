@@ -1,43 +1,54 @@
 ﻿//Author: Brandon Christian
 //Date: 2/10/2026
-//import { getDocument } from "pdfjs-dist"; //read pdf content
-import mammoth from "mammoth"; //read docx content
+import mammoth from "mammoth"; //read docx content //npm install mammoth
 
+//pdf extraction is done client side
 export async function ProcessFileToText(file: File) {
     console.log("File type:")
     console.log(file.type.toString());
 
-    switch (file.type) {
-        case "text/plain": //txt
-            return await file.text();
-        //case "application/pdf": //df
-            //return await ConvertPdfToText(file);
-        case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": //docx
-            return await ConvertDocxToText(file);
-        default:
-            throw Error("Improper file type");
+    try {
+        switch (file.type) {
+            case "text/plain": //txt
+                return await file.text();
+            //case "application/pdf": //pdf
+                //return await ConvertPdfToText(file);
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": //docx
+                return await ConvertDocxToText(file);
+            default:
+                console.log("wrong type")
+                throw Error("Improper file type");
+        }
+    } catch (err) {
+        console.log("error:")
+        console.error(err);
     }
+   
 }
 
-/*
-//TODO: import doesnt work?
+
+/*import { PDFParse } from 'pdf-parse'; //read pdf content //npm install pdf-parse
+
 async function ConvertPdfToText(file: File) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await getDocument({ data: arrayBuffer }).promise;
+    console.log("converting pdf")
+    const ab = await file.arrayBuffer();
+    console.log("to array buffer")
 
-    let text = "";
+    const parser = new PDFParse({ data: ab });
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => ("str" in item ? item.str : "")).join(" ") + "\n";
-    }
+    console.log("to parser")
 
-    return text;
+    const result = await parser.getText();
+
+    console.log(result.text);
+    return result.text;
 }*/
 
 async function ConvertDocxToText(file: File) {
-    const arrayBuffer = await file.arrayBuffer();
-    const result = await mammoth.extractRawText({ arrayBuffer });
+    //start with File, so convert to array buffer > buffer whch mammoth accepts.
+
+    const ab = await file.arrayBuffer();
+    const b = Buffer.from(ab);
+    const result = await mammoth.extractRawText({ buffer: b });
     return result.value;
 }

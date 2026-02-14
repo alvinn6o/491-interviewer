@@ -84,7 +84,7 @@ function AudioMeter({ recordAudio, setAudio }: {
     const [level, setLevel] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
-    console.log("setup audio meter");
+    //console.log("setup audio meter");
 
     useEffect(() => {
         console.log("call use effect");
@@ -105,8 +105,15 @@ function AudioMeter({ recordAudio, setAudio }: {
 
         //Run cleanup
         return () => {
+            console.log("Doing cleanup");
+
             if (Cleanup) {
+                console.log("did cleanup");
+
                 Cleanup();
+            }
+            else {
+                console.log("failed to do cleanup");
             }
         };
     }, []); //array empty so it runs automatically on render
@@ -155,9 +162,12 @@ async function SetupAudioAsync(
 
             //return cleanup function that stops the audio and sends it to the server
             return async () => {
-                cleanup();
+                
+                console.log("About to stop recording");
 
                 const data: Blob = await StopRecording(mediaRecorder, chunks);
+
+                cleanup();
 
                 if (setAudio)
                     setAudio(data);
@@ -165,9 +175,9 @@ async function SetupAudioAsync(
         }
         else
         {
-            console.log("Start meter without recording")
+            console.log("Start meter without recording");
 
-            return cleanup
+            return cleanup;
         }
             
     }
@@ -245,8 +255,14 @@ async function StopRecording(mediaRecorder: MediaRecorder, chunks: Blob[]) {
     return new Promise<Blob>(resolve => {
         mediaRecorder.onstop = () => {
             const audioBlob: Blob = new Blob(chunks, { type: 'audio/webm' });
+
+            console.log("Final blob size:", audioBlob.size);
+
             resolve(audioBlob);
+
         };
+
+
 
         mediaRecorder.stop();
     });

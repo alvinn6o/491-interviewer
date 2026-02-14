@@ -17,7 +17,7 @@ class TokenizeText {
 
     static textToTokens(text: string) {
         const words = text
-            .split(" ")
+            .split(/[\s\n]+/)
             .filter(w => w.length > 0);
 
         const tokens = [];

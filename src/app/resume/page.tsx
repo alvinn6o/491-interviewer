@@ -110,6 +110,7 @@ function UploadBox({ changeState, changeResumeText }: {
 }) {
 
     const [isEmpty, setEmpty] = useState(false);
+    const [isValid, setValid] = useState(true);
     const [isLoading, setLoading] = useState(false);
 
     const UploadResumeButton = async () => {
@@ -120,6 +121,12 @@ function UploadBox({ changeState, changeResumeText }: {
             const result = await OnUploadResumeClicked();
 
             setLoading(false);
+
+            //catch error
+            if (typeof result !== 'string') {
+                setValid(false);
+                return;
+            }
 
             //Disallow empty
             if (result == "") {
@@ -153,11 +160,16 @@ function UploadBox({ changeState, changeResumeText }: {
             {!isLoading && (
                 <div className={`${styles.centered_column}`}>
                     <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
-                    <p className="sub-description">.pdf, .txt, or .docx file</p>
+                    <p className="sub-description"> .txt, or .docx file</p>
 
                     {isEmpty && (
                         <div>
                             Resume was empty. Please upload a document with text.
+                        </div>)}
+
+                    {!isValid && (
+                        <div>
+                            Invalid file or file type. Please try again.
                         </div>)}
                 </div>
 

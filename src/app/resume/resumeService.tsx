@@ -2,8 +2,12 @@
 //Date: 2/10/2026
 //Initial Creation
 
+import { NextRequest, NextResponse } from "next/server";
 
 export async function SendResumeToServer(file: File) {
+
+    console.log("file type client:");
+    console.log(file.type);
 
     const formData = new FormData();
 
@@ -18,6 +22,8 @@ export async function SendResumeToServer(file: File) {
         method: "POST",
         body: formData
     });
+
+
 
     return response;
 }

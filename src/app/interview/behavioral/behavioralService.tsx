@@ -21,6 +21,9 @@ export async function SendAudioToServer(audioData: Blob) {
         `recording.${extension}`
     );
 
+    console.log("about to send blob to back end");
+    console.log("blob size: " + audioData.size);
+
     const response = await fetch("/api/behavioral/uploadAudio", {
         method: "POST",
         body: formData

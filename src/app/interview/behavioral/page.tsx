@@ -6,7 +6,7 @@
 
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
@@ -91,26 +91,20 @@ function ViewSwitcher() {
 
     const [pageState, setPageState] = useState(BIPageState.START);
 
-    //Helps set useState typing
-    const test_items = [
-        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1}
-    ];
-
-    const [feedbackData, setFeedbackData] = useState(test_items);
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
-
+    const [audioData, setAudio] = useState(new Blob());
 
     switch (pageState) {
         case BIPageState.START:
             return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} prompt={interviewPrompt}/>);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} setAudio={setAudio} />);
 
         case BIPageState.END:
-            return (<BIEnd changeState={setPageState} data={feedbackData} />);
+            return (<BIEnd changeState={setPageState} audioData={audioData} />);
     }
 }
 
@@ -144,23 +138,24 @@ function BIStart({ changeState, changePrompt }: {
     );
 }
 
-function BIActive({ changeState, changeFeedbackData, prompt }: {
+function BIActive({ changeState, prompt, setAudio }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
+    setAudio: React.Dispatch<React.SetStateAction<Blob>>;
     prompt: string;
 }) {
 
-    const [audioData, setAudio] = useState(new Blob());
+    //const [audioData, setAudio] = useState(new Blob());
 
     const EndInterviewButton = async () => {
         try {
-            //Try and Wait For Upload
-            const result = await OnEndInterviewClicked(audioData);
+           
+             //Try and Wait For Upload
+            //const result = await OnEndInterviewClicked(audioData);
 
             //store data in useState
-            changeFeedbackData(result);
+            //changeFeedbackData(result);
 
-            //Change state if successful
+            //Change state if successful, send data as we enter the next page
             changeState(BIPageState.END);
         } catch (error) {
             console.log(error);
@@ -192,10 +187,45 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
     );
 }
 
-function BIEnd({ changeState, data }: {
+function BIEnd({ changeState, audioData }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    data: FeedbackItem[];
+    audioData: Blob;
 }) {
+    //Helps set useState typing
+    const test_items = [
+        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
+    ];
+
+
+    const [data, setFeedbackData] = useState(test_items);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+
+        async function UploadAudio() {
+            try {
+                setLoading(true);
+
+                //Try and Wait For Upload
+                const result = await OnEndInterviewClicked(audioData);
+
+                //store data in useState
+                setFeedbackData(result);
+                setLoading(false);
+            } catch (err) {
+                setLoading(false);
+                setError(true);
+                console.error(err);
+            }
+        }
+
+        UploadAudio();
+
+        
+    },
+
+    [])
 
     const RestartInterviewButton = async () => {
         changeState(BIPageState.START);
@@ -275,7 +305,24 @@ function BIEnd({ changeState, data }: {
         <div className={`${styles.centered_column} w-full`}>
             <RecordedVideoBox />
             <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
-            <DataDisplay data={data}/>
+
+            {loading && (
+                <div>
+                Loading feedback...
+                </div>
+            )}
+
+            {!loading && !error && (
+                <DataDisplay data={data} />
+            )}
+
+            {error  && (
+                <div>
+                    Failed to load feedback!
+                </div>
+            )}
+
+            
         </div>
     );
 

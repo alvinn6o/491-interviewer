@@ -33,7 +33,7 @@ async function WaitForFile(): Promise<File> {
     return new Promise((resolve, reject) => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".pdf,.docx,.txt";
+        input.accept = ".docx,.txt";
 
         input.onchange = () => {
             const file = input.files?.item(0);
