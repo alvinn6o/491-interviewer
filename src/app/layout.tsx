@@ -1,3 +1,6 @@
+//Alexander Tu
+// 02/11/2025
+
 // Dylan Hartley
 // 12/12/2025
 
@@ -9,6 +12,7 @@ import { Geist } from "next/font/google";
 import { TRPCReactProvider } from "~/trpc/react";
 import Navbar from "~/components/Navbar";
 import SessionProvider from "~/components/SessionProvider";
+import ChatWidget from "~/components/ChatWidget";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -31,6 +35,7 @@ export default function RootLayout({
           <SessionProvider>
             <Navbar />
             {children}
+            <ChatWidget />
           </SessionProvider>
         </TRPCReactProvider>
       </body>
