@@ -16,7 +16,7 @@ type Question = {
   prompt: string;
 };
 
-/* Dummy Fetch */
+/* testing Fetch */
 function fetchTechnicalQuestions(): Question[] {
   return [
     { id: 1, prompt: "Write a function that adds two numbers." },

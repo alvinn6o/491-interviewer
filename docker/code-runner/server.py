@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Simple code execution server - Judge0-compatible API"""
+# flask server that executes code in a sandbox
 
 import subprocess
 import tempfile
@@ -9,25 +9,25 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Language configurations
+# language configs: file extension, compile cmd (if needed), run cmd
 LANGUAGES = {
     "python": {"ext": ".py", "compile": None, "run": ["python3", "{file}"]},
     "cpp": {"ext": ".cpp", "compile": ["g++", "-o", "{out}", "{file}"], "run": ["{out}"]},
-    # Judge0 language IDs
-    71: {"ext": ".py", "compile": None, "run": ["python3", "{file}"]},  # Python 3
-    54: {"ext": ".cpp", "compile": ["g++", "-o", "{out}", "{file}"], "run": ["{out}"]},  # C++
+    # also support numeric ids for compatibility
+    71: {"ext": ".py", "compile": None, "run": ["python3", "{file}"]},
+    54: {"ext": ".cpp", "compile": ["g++", "-o", "{out}", "{file}"], "run": ["{out}"]},
 }
 
-TIMEOUT = 10  # seconds
+TIMEOUT = 10  # max seconds before killing process
 
 
 def execute_code(language, source_code, stdin=""):
-    """Execute code and return result"""
+    # write code to temp file, compile if needed, run, return output
     lang_config = LANGUAGES.get(language)
     if not lang_config:
         return {"error": f"Unsupported language: {language}"}
 
-    # Create temp directory
+    # temp directory auto-deletes when done (isolation + cleanup)
     with tempfile.TemporaryDirectory() as tmpdir:
         file_id = str(uuid.uuid4())
         source_file = os.path.join(tmpdir, f"{file_id}{lang_config['ext']}")
@@ -39,7 +39,7 @@ def execute_code(language, source_code, stdin=""):
 
         compile_output = ""
 
-        # Compile if needed
+        # step 1: compile (only for c++)
         if lang_config["compile"]:
             compile_cmd = [
                 c.format(file=source_file, out=output_file)
@@ -72,7 +72,7 @@ def execute_code(language, source_code, stdin=""):
                     "memory": None,
                 }
 
-        # Run
+        # step 2: run the code and capture output
         run_cmd = [
             c.format(file=source_file, out=output_file)
             for c in lang_config["run"]
@@ -112,7 +112,7 @@ def execute_code(language, source_code, stdin=""):
 
 @app.route("/submissions", methods=["POST"])
 def submit():
-    """Judge0-compatible submission endpoint"""
+    # main endpoint to receives code, runs it, returns result
     data = request.json
     source_code = data.get("source_code", "")
     language = data.get("language") or data.get("language_id")
@@ -124,7 +124,7 @@ def submit():
 
 @app.route("/about", methods=["GET"])
 def about():
-    """Health check endpoint"""
+    # verifies container is running
     return jsonify({"name": "Simple Code Runner", "version": "1.0"})
 
 

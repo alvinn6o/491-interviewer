@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// Code runner URL - use local Docker container by default
+// points to our docker code-runner container
 const CODE_RUNNER_URL = process.env.CODE_RUNNER_URL || "http://localhost:2358";
 
 interface ExecutionRequest {
@@ -18,6 +18,7 @@ interface CodeRunnerResult {
   memory: number | null;
 }
 
+// receives code from frontend, forwards to docker container, returns result
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Call the code runner container
+    // send code to docker container for execution
     const response = await fetch(`${CODE_RUNNER_URL}/submissions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
 
     const result: CodeRunnerResult = await response.json();
 
+    // format and return execution results to frontend
     return NextResponse.json({
       stdout: result.stdout || "",
       stderr: result.stderr || "",

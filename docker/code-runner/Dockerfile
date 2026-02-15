@@ -1,20 +1,15 @@
-# Simple code execution container - ARM64 native
+# code execution container - runs python and c++ in isolation
 FROM python:3.11-slim
 
-# Install g++ for C++
+# install c++ compiler
 RUN apt-get update && apt-get install -y g++ && rm -rf /var/lib/apt/lists/*
 
-# Install Flask for the API
+# install flask for the api server
 RUN pip install flask
 
-# Create app directory
 WORKDIR /app
-
-# Copy the server script
 COPY server.py .
 
-# Expose port
+# flask server listens on port 5000
 EXPOSE 5000
-
-# Run the server
 CMD ["python", "server.py"]
