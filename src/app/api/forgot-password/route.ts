@@ -14,9 +14,9 @@ export async function POST(req: Request) {
     });
 
     console.log("user found:", user);
-    
+
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User not found" });
     }
 
     const token = randomUUID();
@@ -37,9 +37,9 @@ export async function POST(req: Request) {
 
     await sendPasswordResetEmail(email, token);
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Forgot Password Error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" });
   }
 }
