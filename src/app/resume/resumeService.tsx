@@ -6,6 +6,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function SendResumeToServer(file: File) {
 
+    /* Send the resume text file to the server. It will Confirm that the resume
+    contains text and will return that text as a plain string back to the client. */
+
+
     console.log("file type client:");
     console.log(file.type);
 
@@ -18,6 +22,8 @@ export async function SendResumeToServer(file: File) {
 
     console.log("sending file to server")
 
+
+
     const response = await fetch("/api/resume/upload", {
         method: "POST",
         body: formData
@@ -29,6 +35,11 @@ export async function SendResumeToServer(file: File) {
 }
 
 export async function SendResumeTextAndJobDescToServer(resumeText: string, jobDescText: string) {
+
+    /* Send the resume text string back to the server as well as the job description
+    At this point we should perform an analysis of the resume and job desc and receive that
+    as a response here.*/
+
 
     const formData = new FormData();
 

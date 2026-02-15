@@ -8,7 +8,7 @@ import type { Dict } from "@trpc/server";
 
 class TokenizeText {
     // INPUT: string containing the textified audio
-    // OUTPUT: object mapping tokens -> count
+    // OUTPUT: object mapping tokens by count
     static textToTokensByCount(text: string) {
         const tokens = TokenizeText.textToTokens(text);
         const tokensByCount = TokenizeText.groupTokens(tokens);
@@ -17,7 +17,7 @@ class TokenizeText {
 
     static textToTokens(text: string) {
         const words = text
-            .split(/[\s\n]+/)
+            .split(/[\s\n]+/) //split on white space and new line
             .filter(w => w.length > 0);
 
         const tokens = [];
@@ -76,7 +76,6 @@ class TokenizeText {
 
     // INPUT: previous token and current word
     // OUTPUT: whether the token and word should be combined
-    // TODO: refer to some pre-existing list of multi-word tokens
     static partOfCombinedToken(lastToken : string, word : string) {
         if (lastToken === "")
             return true;

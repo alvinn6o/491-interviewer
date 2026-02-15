@@ -89,8 +89,12 @@ enum BIPageState {
 
 function ViewSwitcher() {
 
-    const [pageState, setPageState] = useState(BIPageState.START);
+    /*
+        Switch between page states for Before, During, and After the interview.
+        Also pass recorded data and the prompt between page states.
+    */
 
+    const [pageState, setPageState] = useState(BIPageState.START);
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
@@ -113,6 +117,7 @@ function BIStart({ changeState, changePrompt }: {
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
 }) {
 
+    //Unused setAudio, only here so that the non-recording mic display doesn't complain.
     const [audioData, setAudio] = useState(new Blob());
 
     const StartInterviewButton = async () => {
@@ -144,18 +149,15 @@ function BIActive({ changeState, prompt, setAudio }: {
     prompt: string;
 }) {
 
-    //const [audioData, setAudio] = useState(new Blob());
 
     const EndInterviewButton = async () => {
         try {
-           
-             //Try and Wait For Upload
-            //const result = await OnEndInterviewClicked(audioData);
-
-            //store data in useState
-            //changeFeedbackData(result);
 
             //Change state if successful, send data as we enter the next page
+            //The audio data is triggered by the re-render for the next page state
+            //A useEffect cleanUp for the audio recording will set the audioData as the new
+            //Page is rendered
+
             changeState(BIPageState.END);
         } catch (error) {
             console.log(error);
@@ -196,18 +198,20 @@ function BIEnd({ changeState, audioData }: {
         { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
     ];
 
-
+    //Modified for UC 1 to include loading and error states
     const [data, setFeedbackData] = useState(test_items);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
 
-    useEffect(() => {
+    useEffect(() => { //Call once on page state load
 
         async function UploadAudio() {
             try {
                 setLoading(true);
 
                 //Try and Wait For Upload
+                //Send the audio data previously set by the useEffect cleanup in
+                //The Active page state to the server to be transcribed.
                 const result = await OnEndInterviewClicked(audioData);
 
                 //store data in useState

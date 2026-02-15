@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     try {
         console.log("POSTED resume/uploap");
 
+        //Process the file from a File object into raw text
         const text = await ProcessFileToText(file);
 
         console.log("Processed file to text");
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
     }
     catch (err : any) {
         return NextResponse.json(
-            { error: err?.message || "Something went wrong" },
+            { error: err?.message || "unknown error occurred" },
             { status: 400 }
         );
     }

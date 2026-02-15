@@ -36,6 +36,8 @@ export function CreateTestInterviewItems() {
 
     return items;
 }
+
+//Convert InterviewSession DB object into a form readable by the UI
 export function InterviewSessionsToInterviewItems(sessions: any[]) {
     const items: InterviewItem[] = new Array(sessions.length);
 

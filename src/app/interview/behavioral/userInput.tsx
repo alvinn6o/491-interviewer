@@ -15,6 +15,8 @@ import { useState } from "react";
 import styles from "./test.module.css";
 
 async function StartStream(useAudio: boolean, useVideo: boolean) {
+
+    //obtain the user's camera and audio feed
     let stream = await navigator.mediaDevices.getUserMedia({
         audio: useAudio,
         video: useVideo,
@@ -240,6 +242,8 @@ async function StartAudioMeter(
 function StartRecording(mediaRecorder: MediaRecorder) {
     let chunks: Blob[] = []
 
+    //Use media recorder to push the data as its recorded into "chunks"
+    //which is actiely updated
     mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
             chunks.push(event.data);
@@ -252,6 +256,8 @@ function StartRecording(mediaRecorder: MediaRecorder) {
 }
 
 async function StopRecording(mediaRecorder: MediaRecorder, chunks: Blob[]) {
+    //ON cleanup, return the final audio blob and stop the recording
+
     return new Promise<Blob>(resolve => {
         mediaRecorder.onstop = () => {
             const audioBlob: Blob = new Blob(chunks, { type: 'audio/webm' });

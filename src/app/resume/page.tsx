@@ -48,6 +48,9 @@ enum UploadPageState {
 
 function ViewSwitcher() {
 
+    /*switch page state between upload resume, job desc, and feedback (results)
+    also pass data between these states*/
+
     const [uploadState, setUploadState] = useState(UploadPageState.UPLOAD);
 
     //Helps set useState typing

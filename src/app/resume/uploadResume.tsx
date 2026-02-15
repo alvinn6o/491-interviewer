@@ -11,13 +11,19 @@ import type { Dict } from "@trpc/server";
 export async function OnUploadResumeClicked(): Promise<string>  { 
 
     try {
+        /*Pause excution and wait for the user to select a non-empty
+        valid file*/
+
         const file = await WaitForFile();
         console.log("Selected file:", file);
 
+        //Send that file to the server
         const resp = await SendResumeToServer(file);
 
+        //extract the text from the response
         const text = await resp.json();
 
+        //return the text to the user
         return new Promise((resolve) => {
             setTimeout(() => resolve(text), 10);
         });
@@ -30,6 +36,9 @@ export async function OnUploadResumeClicked(): Promise<string>  {
 };
 
 async function WaitForFile(): Promise<File> {
+
+    /*Wait for file to be selected by the user*/
+
     return new Promise((resolve, reject) => {
         const input = document.createElement("input");
         input.type = "file";
@@ -57,11 +66,11 @@ async function WaitForFile(): Promise<File> {
 
 export async function OnAddJobDescriptionClicked(resumeText: string, jobDesc: string): Promise<FeedbackItem[]> {
 
+    //Send resume and job desc to server to be analyzed
     const response = await SendResumeTextAndJobDescToServer(resumeText, jobDesc);
 
-    //TODO convert result to feedbackItems
-
-    //test data in place of actual response
+    //dummy data in place of full response as full analysis
+    //is not yet implemented
     const test_items = [
         { key: FeedbackCategory.MATCH_SCORE, name: "none", description: "50%", status: true },
 
@@ -86,10 +95,13 @@ export async function OnAddJobDescriptionClicked(resumeText: string, jobDesc: st
     ];
 
     //For testing purposes, add the tokens to the list of keywords
+    //So we can see an active change in our data in response to the
+    //uploaded file
     const tokensByCount: Dict<number> = await response.json();
 
     console.log(tokensByCount);
-    
+
+    //Add each word and its count to the feedback items
     Object.entries(tokensByCount).forEach(
         ([token, value]) => {
 
@@ -101,7 +113,7 @@ export async function OnAddJobDescriptionClicked(resumeText: string, jobDesc: st
         }
     );
 
-    //return stub promise
+    //return promise containing the items
     return new Promise((resolve) => {
         setTimeout(() => resolve(test_items), 10);
     });

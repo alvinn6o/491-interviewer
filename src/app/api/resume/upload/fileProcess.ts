@@ -2,7 +2,7 @@
 //Date: 2/10/2026
 import mammoth from "mammoth"; //read docx content //npm install mammoth
 
-//pdf extraction is done client side
+//determine which type of file was uploaded
 export async function ProcessFileToText(file: File) {
     console.log("File type:")
     console.log(file.type.toString());
@@ -10,9 +10,7 @@ export async function ProcessFileToText(file: File) {
     try {
         switch (file.type) {
             case "text/plain": //txt
-                return await file.text();
-            //case "application/pdf": //pdf
-                //return await ConvertPdfToText(file);
+                return await file.text(); //.txt is simple extraction
             case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": //docx
                 return await ConvertDocxToText(file);
             default:
@@ -25,24 +23,6 @@ export async function ProcessFileToText(file: File) {
     }
    
 }
-
-
-/*import { PDFParse } from 'pdf-parse'; //read pdf content //npm install pdf-parse
-
-async function ConvertPdfToText(file: File) {
-    console.log("converting pdf")
-    const ab = await file.arrayBuffer();
-    console.log("to array buffer")
-
-    const parser = new PDFParse({ data: ab });
-
-    console.log("to parser")
-
-    const result = await parser.getText();
-
-    console.log(result.text);
-    return result.text;
-}*/
 
 async function ConvertDocxToText(file: File) {
     //start with File, so convert to array buffer > buffer whch mammoth accepts.

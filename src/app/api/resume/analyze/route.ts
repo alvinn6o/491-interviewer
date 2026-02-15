@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
 
     const resumeTokensByCount = ProcessTextToTokens(resumeText.toString())
 
+    //For now, return only the tokens by count as response data
     return NextResponse.json(resumeTokensByCount);
 
 }

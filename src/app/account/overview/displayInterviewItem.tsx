@@ -22,6 +22,8 @@ enum InterviewItemState {
 
 export function InterviewItemBox({ item } : { item: InterviewItem }) {
 
+    //Display a single Interview Item
+
     const [itemState, setItemState] = useState(InterviewItemState.DEFAULT);
 
     let title = item.type.toString() == "TECHNICAL" ? "Technical Interview" : "Behavioral Interview";
@@ -47,7 +49,9 @@ export function InterviewItemBox({ item } : { item: InterviewItem }) {
     }
 }
 
-function InterviewItemWrapper({ title, status, children }: { title: string, status: string, children:React.ReactNode }) {
+function InterviewItemWrapper({ title, status, children }: { title: string, status: string, children: React.ReactNode }) {
+    //Wrap interviews with display open and without it open in the same outsides
+
     return (
         <div className="border p-1 m-1">
             <div>
@@ -69,7 +73,7 @@ function InterviewItemDefault({ title, status, setState }: {
     status: string;
     setState: React.Dispatch<React.SetStateAction<InterviewItemState>>;
 }) {
-
+    //Display interview item without an overview open
     return (
         <InterviewItemWrapper title = {title} status = {status}> 
             <div>
@@ -85,6 +89,7 @@ function InterviewItemOverview({ title, status, setState, interviewItem}: {
     setState: React.Dispatch<React.SetStateAction<InterviewItemState>>;
     interviewItem: InterviewItem;
 }) {
+    //Display interview item WITH an overview open
 
     return (
         <InterviewItemWrapper title = {title} status = {status}> 
@@ -100,6 +105,8 @@ function InterviewItemOverview({ title, status, setState, interviewItem}: {
 }
 
 function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem }) {
+    //Display actual overview content
+
     return (
         <div>
             <div>Info: </div>
@@ -141,6 +148,8 @@ function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem 
 }
 
 function InterviewResponseList({ responses }: { responses: InterviewResponse[] }) {
+    //Display list of interview responses (if any)
+
     return (
         <div>
             {responses?.map(

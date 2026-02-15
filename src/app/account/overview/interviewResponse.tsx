@@ -12,6 +12,8 @@ export type InterviewResponse = {
     answeredAt: number
 }
 
+//Convert interview response DB data into a form readable by the UI
+
 export function SessionResponseToInterviewResponses(sessionResponses: any[]) {
     const responses: InterviewResponse[] = new Array(sessionResponses.length);
 

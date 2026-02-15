@@ -11,7 +11,7 @@
 import { InterviewSessionsToInterviewItems } from "./interviewItem";
 //import { InteriewReportToReportItem, CreateTestReport } from "./interviewItem";
 
-
+//Fetch the user interview sessions for the current user from the DB
 export async function GetCurrentUserInterviewData() {
     const response = await fetch(`/api/interview/session/currentuser`, {
         method: "GET"
