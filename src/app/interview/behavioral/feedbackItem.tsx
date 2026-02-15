@@ -21,6 +21,8 @@ export type FeedbackItem = {
     score: number
 }
 
+/*Convert analysis response into form the UI can read*/
+
 export function AnalysisResultToFBItems(analysisJSON: string)
 {
     const analysisItems: any[] = JSON.parse(analysisJSON);
