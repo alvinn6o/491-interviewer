@@ -7,6 +7,9 @@
 import type { FeedbackItem } from "./feedbackItem";
 import { AnalysisResultToFBItems } from "./feedbackItem";
 
+//TODO: for some reason this gets called twice in a row before finally resolving.
+//Could do with re-renders triggering it twice?
+//The empty array of useEffect should mean it never gets called twice, but it does.
 export async function SendAudioToServer(audioData: Blob) {
     //Extract the file extension
     //which differs between browsers

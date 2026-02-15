@@ -28,9 +28,9 @@ async function StartStream(useAudio: boolean, useVideo: boolean) {
 //Camera component
 //Also contains audio meter component
 //TODO: implement camera recording
-export function CameraBox({ recordAudio, setAudio }: {
+export function CameraBox({ recordAudio, audioRef }: {
     recordAudio: boolean,
-    setAudio: React.Dispatch<React.SetStateAction<Blob>>
+    audioRef: React.RefObject<Blob | null>;
 }) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -72,16 +72,16 @@ export function CameraBox({ recordAudio, setAudio }: {
                 muted
                 className="w-full max-w-md rounded"
             />
-            <AudioMeter recordAudio = {recordAudio} setAudio = {setAudio} />
+            <AudioMeter recordAudio={recordAudio} audioRef={audioRef} />
         </div>
 
     )
 }
 
 //Audio Meter component
-function AudioMeter({ recordAudio, setAudio }: {
+function AudioMeter({ recordAudio, audioRef }: {
     recordAudio: boolean,
-    setAudio: React.Dispatch<React.SetStateAction<Blob>>
+    audioRef: React.RefObject<Blob | null>
 }) {
     const [level, setLevel] = useState(0);
     const [error, setError] = useState<string | null>(null);
@@ -101,7 +101,7 @@ function AudioMeter({ recordAudio, setAudio }: {
                 setError,
                 setLevel,
                 recordAudio,
-                setAudio
+                audioRef
             );
         })();
 
@@ -140,7 +140,7 @@ async function SetupAudioAsync(
     setError: React.Dispatch<React.SetStateAction<string | null>>,
     setLevel: React.Dispatch<React.SetStateAction<number>>,
     recordAudio: boolean,
-    setAudio: React.Dispatch<React.SetStateAction<Blob>>
+    audioRef: React.RefObject<Blob | null>
 )
 {
     console.log("setup audio async");
@@ -171,8 +171,9 @@ async function SetupAudioAsync(
 
                 cleanup();
 
-                if (setAudio)
-                    setAudio(data);
+                //triggers await in BIEnd for audio data to end
+                if (audioRef)
+                    audioRef.current = data;
             }
         }
         else

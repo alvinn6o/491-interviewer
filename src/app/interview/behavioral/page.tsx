@@ -6,7 +6,7 @@
 
 
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
@@ -41,7 +41,7 @@ function OnFailedStartInterview() {
 }
 
 
-async function OnEndInterviewClicked(audioData: Blob): Promise<FeedbackItem[]> {
+async function OnFeedbackPageLoad(audioData: Blob): Promise<FeedbackItem[]> {
     //Send audio and camera to server
     //Receive analysis/feedback
     //page.tsx > behavioralService.tsx > api/behavioral/uploadAudio/route.ts
@@ -98,27 +98,44 @@ function ViewSwitcher() {
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
-    const [audioData, setAudio] = useState(new Blob());
+    const audioRef = useRef<Blob | null>(null);
+
+    //use deferred promise so that BIEnd can wait until
+    //the audio is ready from BIActive before attempting to upload
+    function waitForAudio(): Promise<Blob> {
+        return new Promise((resolve) => {
+            if (audioRef.current) {
+                resolve(audioRef.current);
+                return;
+            }
+
+            //wait for 50 ticks before checking again
+            const interval = setInterval(() => {
+                if (audioRef.current) {
+                    clearInterval(interval);
+                    resolve(audioRef.current);
+                }
+            }, 50);
+        });
+    }
 
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} prompt={interviewPrompt} setAudio={setAudio} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} />);
 
         case BIPageState.END:
-            return (<BIEnd changeState={setPageState} audioData={audioData} />);
+            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} />);
     }
 }
 
-function BIStart({ changeState, changePrompt }: {
+function BIStart({ changeState, changePrompt, audioRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
+    audioRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
 }) {
-
-    //Unused setAudio, only here so that the non-recording mic display doesn't complain.
-    const [audioData, setAudio] = useState(new Blob());
 
     const StartInterviewButton = async () => {
         try {
@@ -137,18 +154,20 @@ function BIStart({ changeState, changePrompt }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox recordAudio={false} setAudio={setAudio} />
+            <CameraBox recordAudio={false} audioRef={audioRef} />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
     );
 }
 
-function BIActive({ changeState, prompt, setAudio }: {
+function BIActive({ changeState, prompt, audioRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    setAudio: React.Dispatch<React.SetStateAction<Blob>>;
+    audioRef: React.RefObject<Blob | null>;
     prompt: string;
 }) {
-
+    useEffect(() => {
+        audioRef.current = null;
+    }, []);
 
     const EndInterviewButton = async () => {
         try {
@@ -178,7 +197,7 @@ function BIActive({ changeState, prompt, setAudio }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <CameraBox recordAudio={true} setAudio={setAudio} />
+            <CameraBox recordAudio={true} audioRef={audioRef} />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>
@@ -189,9 +208,9 @@ function BIActive({ changeState, prompt, setAudio }: {
     );
 }
 
-function BIEnd({ changeState, audioData }: {
+function BIEnd({ changeState, waitForAudio }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    audioData: Blob;
+    waitForAudio: () => Promise<Blob>;
 }) {
     //Helps set useState typing
     const test_items = [
@@ -205,6 +224,8 @@ function BIEnd({ changeState, audioData }: {
 
     useEffect(() => { //Call once on page state load
 
+        console.log("CALLING USE EFFECT FOR BI END");
+
         async function UploadAudio() {
             try {
                 setLoading(true);
@@ -212,7 +233,15 @@ function BIEnd({ changeState, audioData }: {
                 //Try and Wait For Upload
                 //Send the audio data previously set by the useEffect cleanup in
                 //The Active page state to the server to be transcribed.
-                const result = await OnEndInterviewClicked(audioData);
+                console.log("Waiting for audioData to resolve.")
+
+                const audioData = await waitForAudio(); //await for the audio data to be sent by BIActive
+
+                console.log("Waiting for audioData to be analyzed")
+
+                const result = await OnFeedbackPageLoad(audioData);//await for the audio data to be uploaded
+
+                console.log("Setting feedback...")
 
                 //store data in useState
                 setFeedbackData(result);
