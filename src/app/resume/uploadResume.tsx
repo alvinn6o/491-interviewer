@@ -5,10 +5,22 @@
 import { SendResumeToServer, SendResumeTextAndJobDescToServer } from "./resumeService";
 import type { FeedbackItem } from "./feedbackItem"
 import { FeedbackCategory } from "./feedbackItem"
-import type { Dict } from "@trpc/server";
 
+interface UploadResult {
+    success: true;
+    fileName: string;
+    extractedText: string;
+    textLength: number;
+}
 
-export async function OnUploadResumeClicked(): Promise<string>  { 
+interface UploadError {
+    success: false;
+    error: string;
+}
+
+type UploadResponse = UploadResult | UploadError;
+
+export async function OnUploadResumeClicked(): Promise<UploadResponse>  {
 
     try {
         /*Pause excution and wait for the user to select a non-empty
@@ -19,20 +31,30 @@ export async function OnUploadResumeClicked(): Promise<string>  {
 
         //Send that file to the server
         const resp = await SendResumeToServer(file);
+        const result = await resp.json();
 
-        //extract the text from the response
-        const text = await resp.json();
+        if (!result.success) {
+            return {
+                success: false,
+                error: result.error?.message || "Upload failed",
+            };
+        }
 
-        //return the text to the user
-        return new Promise((resolve) => {
-            setTimeout(() => resolve(text), 10);
-        });
+        return {
+            success: true,
+            fileName: result.data.fileName,
+            extractedText: result.data.extractedText,
+            textLength: result.data.textLength,
+        };
 
     } catch (err) {
         console.error(err);
-        throw err;
+        return {
+            success: false,
+            error: err instanceof Error ? err.message : "Upload failed",
+        };
     }
-    
+
 };
 
 async function WaitForFile(): Promise<File> {
@@ -42,7 +64,7 @@ async function WaitForFile(): Promise<File> {
     return new Promise((resolve, reject) => {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = ".docx,.txt";
+        input.accept = ".pdf,.docx,.txt";
 
         input.onchange = () => {
             const file = input.files?.item(0);
@@ -64,58 +86,130 @@ async function WaitForFile(): Promise<File> {
     });
 }
 
-export async function OnAddJobDescriptionClicked(resumeText: string, jobDesc: string): Promise<FeedbackItem[]> {
+export async function OnAddJobDescriptionClicked(
+    resumeText: string,
+    jobDesc: string,
+    resumeFileName: string
+): Promise<FeedbackItem[]> {
 
     //Send resume and job desc to server to be analyzed
-    const response = await SendResumeTextAndJobDescToServer(resumeText, jobDesc);
+    const response = await SendResumeTextAndJobDescToServer(resumeText, jobDesc, resumeFileName);
+    const result = await response.json();
 
-    //dummy data in place of full response as full analysis
-    //is not yet implemented
-    const test_items = [
-        { key: FeedbackCategory.MATCH_SCORE, name: "none", description: "50%", status: true },
+    if (!result.success) {
+        throw new Error(result.error?.message || "Analysis failed");
+    }
 
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 1", description: "ATS_SCORE Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 2", description: "ATS_SCORE Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 3", description: "ATS_SCORE Lorem Ipsum 3", status: true },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 4", description: "ATS_SCORE Lorem Ipsum 4", status: false },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 5", description: "ATS_SCORE Lorem Ipsum 5", status: false },
+    const { atsResult } = result.data;
+    const { keywordResult, breakdown, details, score, grade } = atsResult;
 
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 1", description: "SKILLS_MATCH Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 2", description: "SKILLS_MATCH Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 3", description: "SKILLS_MATCH Lorem Ipsum 3", status: true },
+    // Build FeedbackItem[] from ATS scoring results
+    const items: FeedbackItem[] = [];
 
-        { key: FeedbackCategory.FORMATTING, name: "Item 1", description: "FORMATTING Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.FORMATTING, name: "Item 2", description: "FORMATTING Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.FORMATTING, name: "Item 3", description: "FORMATTING Lorem Ipsum 3", status: true },
-        { key: FeedbackCategory.FORMATTING, name: "Item 4", description: "FORMATTING Lorem Ipsum 4", status: false },
-
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 1", description: "RECRUITER_TIPS Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 2", description: "RECRUITER_TIPS Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 3", description: "RECRUITER_TIPS Lorem Ipsum 3", status: true }
-    ];
-
-    //For testing purposes, add the tokens to the list of keywords
-    //So we can see an active change in our data in response to the
-    //uploaded file
-    const tokensByCount: Dict<number> = await response.json();
-
-    console.log(tokensByCount);
-
-    //Add each word and its count to the feedback items
-    Object.entries(tokensByCount).forEach(
-        ([token, value]) => {
-
-            if (value) {
-                const item: FeedbackItem = { key: FeedbackCategory.KEYWORDS, name: token, description: value.toString(), status: true };
-                test_items.push(item);
-            }
-                
-        }
-    );
-
-    //return promise containing the items
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(test_items), 10);
+    // Match Score (overall ATS score displayed as the big number)
+    items.push({
+        key: FeedbackCategory.MATCH_SCORE,
+        name: "none",
+        description: `${score}% (${grade})`,
+        status: true,
     });
+
+    // ATS Score section: weighted breakdown per dimension
+    items.push({
+        key: FeedbackCategory.ATS_SCORE,
+        name: "Overall",
+        description: `ATS Score: ${score}/100 — Grade: ${grade}`,
+        status: score >= 60,
+    });
+
+    for (const detail of details) {
+        items.push({
+            key: FeedbackCategory.ATS_SCORE,
+            name: detail.dimension,
+            description: `${detail.score}/100 — ${detail.explanation}`,
+            status: detail.score >= 50,
+        });
+    }
+
+    // Skills Match: technical skills + tools
+    const technicalMatches = keywordResult.matches.filter(
+        (m: { category: string }) => m.category === "technical_skill" || m.category === "tool"
+    );
+    for (const match of technicalMatches) {
+        items.push({
+            key: FeedbackCategory.SKILLS_MATCH,
+            name: match.keyword,
+            description: match.found
+                ? `"${match.keyword}" matched`
+                : `Missing: "${match.keyword}"`,
+            status: match.found,
+        });
+    }
+
+    // Keywords: all job description keywords
+    for (const match of keywordResult.matches) {
+        items.push({
+            key: FeedbackCategory.KEYWORDS,
+            name: match.keyword,
+            description: match.found
+                ? `"${match.keyword}" found in resume`
+                : `"${match.keyword}" missing from resume`,
+            status: match.found,
+        });
+    }
+
+    // Recruiter Tips: actionable advice based on scores
+    if (keywordResult.missingKeywords.length > 0) {
+        const topMissing = keywordResult.missingKeywords.slice(0, 5);
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Add Keywords",
+            description: `Consider adding: ${topMissing.join(", ")}`,
+            status: false,
+        });
+    }
+
+    if (breakdown.experience.score < 50) {
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Experience",
+            description: "Your experience may fall short — highlight relevant projects or internships",
+            status: false,
+        });
+    }
+
+    if (breakdown.education.score < 50) {
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Education",
+            description: "Education requirement may not be met — emphasize certifications or coursework",
+            status: false,
+        });
+    }
+
+    if (score >= 75) {
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Strong Match",
+            description: "Your resume is well-aligned with this job — likely to pass ATS screening",
+            status: true,
+        });
+    } else if (score >= 50) {
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Moderate Match",
+            description: "Your resume partially matches — tailor it more closely to this specific role",
+            status: false,
+        });
+    } else {
+        items.push({
+            key: FeedbackCategory.RECRUITER_TIPS,
+            name: "Weak Match",
+            description: "Significant gaps detected — heavily tailor your resume for this role",
+            status: false,
+        });
+    }
+
+    return items;
 };
 

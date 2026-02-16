@@ -1,33 +1,147 @@
-//Author: Brandon Christian
-//Date: 2/10/2026
-//resume/analyze
+import { NextResponse } from "next/server";
+import { auth } from "~/server/auth";
+import { preprocessJobDescription } from "~/server/utils/document-parser";
+import { computeATSScore } from "~/server/utils/ats-scorer";
+import type { ATSScoreResult } from "~/server/utils/ats-scorer";
+import {
+  VALIDATION_CONFIG,
+} from "~/server/utils/file-validation";
 
-import { NextRequest, NextResponse } from "next/server";
-import { ProcessTextToTokens } from "../../behavioral/uploadAudio/audioProcess"
+// ============================================
+// Types
+// ============================================
 
-export async function POST(req: NextRequest) {
+interface AnalyzeRequest {
+  resumeText: string;
+  jobDescription: string;
+  resumeFileName: string;
+}
 
-    //extract the audio from the formData sent
-    const formData = await req.formData();
-    const resumeText = formData.get("resume");
-    const jobDescText = formData.get("jobDesc");
+interface AnalyzeSuccessResponse {
+  success: true;
+  data: {
+    atsResult: ATSScoreResult;
+    resumeFileName: string;
+  };
+}
 
-    if (!resumeText || !jobDescText) {
+interface AnalyzeErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+  };
+}
 
-        return NextResponse.json(
-            { error: "missing resume text or job desc text" },
-            { status: 400 }
-        );
-        
+type AnalyzeResponse = AnalyzeSuccessResponse | AnalyzeErrorResponse;
+
+// ============================================
+// POST /api/resume/analyze
+// ============================================
+
+export async function POST(req: Request): Promise<NextResponse<AnalyzeResponse>> {
+  try {
+    // 1. Auth check
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Please log in to analyze your resume",
+          },
+        },
+        { status: 401 }
+      );
     }
-    
 
-    console.log("Posted job and resume to server ")
-    //TODO Process text through resume analysis server
+    // 2. Parse request body
+    const body = (await req.json()) as Partial<AnalyzeRequest>;
 
-    const resumeTokensByCount = ProcessTextToTokens(resumeText.toString())
+    const { resumeText, jobDescription, resumeFileName } = body;
 
-    //For now, return only the tokens by count as response data
-    return NextResponse.json(resumeTokensByCount);
+    // 3. Validate inputs
+    if (!resumeText || typeof resumeText !== "string") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_RESUME",
+            message: "Resume text is required",
+          },
+        },
+        { status: 400 }
+      );
+    }
 
+    if (!jobDescription || typeof jobDescription !== "string") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "INVALID_JOB_DESC",
+            message: "Job description is required",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    if (resumeText.trim().length < VALIDATION_CONFIG.MIN_TEXT_LENGTH) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "RESUME_TOO_SHORT",
+            message: `Resume must contain at least ${VALIDATION_CONFIG.MIN_TEXT_LENGTH} characters`,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    if (jobDescription.trim().length < VALIDATION_CONFIG.MIN_JOB_DESC_LENGTH) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "JOB_DESC_TOO_SHORT",
+            message: `Job description must contain at least ${VALIDATION_CONFIG.MIN_JOB_DESC_LENGTH} characters`,
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // 4. Preprocess job description
+    const cleanedJobDesc = preprocessJobDescription(jobDescription);
+
+    // 5. Compute full ATS score (includes keyword matching internally)
+    const atsResult = computeATSScore(resumeText, cleanedJobDesc);
+
+    // 6. Return results
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          atsResult,
+          resumeFileName: resumeFileName ?? "resume",
+        },
+      },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("RESUME ANALYZE ERROR:", err);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "SERVER_ERROR",
+          message: "An unexpected error occurred during analysis",
+        },
+      },
+      { status: 500 }
+    );
+  }
 }

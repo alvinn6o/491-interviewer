@@ -2,8 +2,6 @@
 //Date: 2/10/2026
 //Initial Creation
 
-import { NextRequest, NextResponse } from "next/server";
-
 export async function SendResumeToServer(file: File) {
 
     /* Send the resume text file to the server. It will Confirm that the resume
@@ -34,28 +32,20 @@ export async function SendResumeToServer(file: File) {
     return response;
 }
 
-export async function SendResumeTextAndJobDescToServer(resumeText: string, jobDescText: string) {
+export async function SendResumeTextAndJobDescToServer(resumeText: string, jobDescText: string, resumeFileName: string) {
 
     /* Send the resume text string back to the server as well as the job description
     At this point we should perform an analysis of the resume and job desc and receive that
     as a response here.*/
 
-
-    const formData = new FormData();
-
-    formData.append(
-        "resume",
-        resumeText
-    );
-
-    formData.append(
-        "jobDesc",
-        jobDescText
-    );
-
     const response = await fetch("/api/resume/analyze", {
         method: "POST",
-        body: formData
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            resumeText,
+            jobDescription: jobDescText,
+            resumeFileName,
+        })
     });
 
     return response;

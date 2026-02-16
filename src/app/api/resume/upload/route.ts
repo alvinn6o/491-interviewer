@@ -1,46 +1,134 @@
-//Author: Brandon Christian
-//Date: 2/10/2026
-//resume/upload
+import { NextResponse } from "next/server";
+import { auth } from "~/server/auth";
+import {
+  validateUploadedFile,
+  validateTextContent,
+  ValidationErrorCode,
+  ERROR_MESSAGES,
+} from "~/server/utils/file-validation";
+import { extractText } from "~/server/utils/document-parser";
 
-import { NextRequest, NextResponse } from "next/server";
-import { ProcessFileToText } from "./fileProcess";
+interface UploadSuccessResponse {
+  success: true;
+  data: {
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    extractedText: string;
+    textLength: number;
+  };
+}
 
-export async function POST(req: NextRequest) {
-    console.log("Route hit");
+interface UploadErrorResponse {
+  success: false;
+  error: {
+    code: string;
+    message: string;
+  };
+}
 
-    //extract the audio from the formData sent
+type UploadResponse = UploadSuccessResponse | UploadErrorResponse;
+
+export async function POST(req: Request): Promise<NextResponse<UploadResponse>> {
+  try {
+    // 1. Auth check
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Please log in to upload a resume",
+          },
+        },
+        { status: 401 }
+      );
+    }
+
+    // 2. Parse FormData
     const formData = await req.formData();
-    console.log("Got formData");
+    const file = formData.get("file") as File | null;
 
-    const file = formData.get("file") as File;;
-    console.log("File:", file);
+    // 3. Validate file (size, extension, MIME type)
+    const validationResult = await validateUploadedFile(file);
 
-    if (!file) {
-        console.log("No file found");
-        return NextResponse.json(
-            { error: "No file received for resume/upload" },
-            { status: 400 }
-        );
+    if (!validationResult.valid) {
+      const statusCode =
+        validationResult.error === ValidationErrorCode.FILE_TOO_LARGE
+          ? 413
+          : validationResult.error === ValidationErrorCode.NO_FILE
+            ? 400
+            : 415;
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: validationResult.error,
+            message: validationResult.message,
+          },
+        },
+        { status: statusCode }
+      );
     }
 
-    try {
-        console.log("POSTED resume/uploap");
+    // 4. Extract text from file
+    const buffer = Buffer.from(await file!.arrayBuffer());
+    const extractionResult = await extractText(buffer, validationResult.fileType);
 
-        //Process the file from a File object into raw text
-        const text = await ProcessFileToText(file);
-
-        console.log("Processed file to text");
-        console.log(text);
-
-        //send to resumeService.ts
-        //send back to client so that it can be sent together with the job desc
-        //to be uploaded at a different end point
-        return NextResponse.json(text);
+    if (!extractionResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: ValidationErrorCode.CORRUPTED_FILE,
+            message: ERROR_MESSAGES[ValidationErrorCode.CORRUPTED_FILE],
+          },
+        },
+        { status: 422 }
+      );
     }
-    catch (err : any) {
-        return NextResponse.json(
-            { error: err?.message || "unknown error occurred" },
-            { status: 400 }
-        );
+
+    // 5. Validate extracted content
+    if (!validateTextContent(extractionResult.text)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: ValidationErrorCode.INSUFFICIENT_CONTENT,
+            message: ERROR_MESSAGES[ValidationErrorCode.INSUFFICIENT_CONTENT],
+          },
+        },
+        { status: 422 }
+      );
     }
+
+    // 6. Return success with extracted text
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          fileName: file!.name,
+          fileType: validationResult.fileType,
+          fileSize: file!.size,
+          extractedText: extractionResult.text,
+          textLength: extractionResult.text.length,
+        },
+      },
+      { status: 200 }
+    );
+  } catch (err) {
+    console.error("RESUME UPLOAD ERROR:", err);
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "SERVER_ERROR",
+          message: "An unexpected error occurred",
+        },
+      },
+      { status: 500 }
+    );
+  }
 }

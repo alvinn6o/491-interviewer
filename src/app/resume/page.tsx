@@ -61,14 +61,15 @@ function ViewSwitcher() {
     const [feedbackData, setFeedbackData] = useState(test_items);
 
     const [resumeText, setResumeText] = useState("")
+    const [resumeFileName, setResumeFileName] = useState("")
 
-   
+
     switch (uploadState) {
         case UploadPageState.UPLOAD:
-            return (<UploadBox changeState={setUploadState} changeResumeText={setResumeText} />);
+            return (<UploadBox changeState={setUploadState} changeResumeText={setResumeText} changeResumeFileName={setResumeFileName} />);
 
         case UploadPageState.ADD_JOB_DESC:
-            return (<AddJobDescriptionBox changeState={setUploadState} changeFeedbackData={setFeedbackData} resumeText={resumeText} />);
+            return (<AddJobDescriptionBox changeState={setUploadState} changeFeedbackData={setFeedbackData} resumeText={resumeText} resumeFileName={resumeFileName} />);
 
         case UploadPageState.FEEDBACK:
             return (<ViewFeedbackBox changeState={setUploadState} data={feedbackData} />);
@@ -107,9 +108,10 @@ function Instructions() {
     )
 }
 
-function UploadBox({ changeState, changeResumeText }: {
+function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
     changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
     changeResumeText: React.Dispatch<React.SetStateAction<string>>;
+    changeResumeFileName: React.Dispatch<React.SetStateAction<string>>;
 }) {
 
     const [isEmpty, setEmpty] = useState(false);
@@ -126,22 +128,23 @@ function UploadBox({ changeState, changeResumeText }: {
             setLoading(false);
 
             //catch error
-            if (typeof result !== 'string') {
+            if (!result.success) {
                 setValid(false);
                 return;
             }
 
             //Disallow empty
-            if (result == "") {
+            if (result.extractedText == "") {
                 setEmpty(true);
                 return;
             }
 
-            console.log(result);
-            changeResumeText(result);
+            console.log("Upload successful:", result.fileName, `(${result.textLength} chars)`);
+            changeResumeText(result.extractedText);
+            changeResumeFileName(result.fileName);
 
             //Change state if successful
-            changeState(UploadPageState.ADD_JOB_DESC); 
+            changeState(UploadPageState.ADD_JOB_DESC);
         } catch (error: any) {
             console.log(error);
             OnFailedUpload();
@@ -163,7 +166,7 @@ function UploadBox({ changeState, changeResumeText }: {
             {!isLoading && (
                 <div className={`${styles.centered_column}`}>
                     <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
-                    <p className="sub-description"> .txt, or .docx file</p>
+                    <p className="sub-description"> .pdf, .docx, or .txt file</p>
 
                     {isEmpty && (
                         <div>
@@ -191,11 +194,12 @@ enum JobDescriptionTemplate
 }
 
 function AddJobDescriptionBox(
-    { changeState, changeFeedbackData, resumeText } :
+    { changeState, changeFeedbackData, resumeText, resumeFileName } :
         {
             changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
             changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
-            resumeText: string
+            resumeText: string;
+            resumeFileName: string;
         }
 ) {
 
@@ -213,7 +217,7 @@ function AddJobDescriptionBox(
             setLoading(true);
 
             //Wait For Upload
-            const result = await OnAddJobDescriptionClicked(resumeText, template);
+            const result = await OnAddJobDescriptionClicked(resumeText, template, resumeFileName);
 
             setLoading(false);
 
