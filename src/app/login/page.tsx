@@ -1,3 +1,4 @@
+// Justin Do
 // 12/12/2025
 
 "use client";
@@ -102,6 +103,10 @@ export default function LoginPage() {
             />
             Remember me?
           </label>
+
+          <Link href="/forgot-password" title="Recover password" className="text-blue-600 hover:underline">
+          Forgot password?
+        </Link>
         </div>
 
         <p className="text-sm text-center mt-2">
