@@ -1,12 +1,20 @@
 ﻿//Author: Brandon Christian
 //Date: 12/12/2025
 
+//Date: 1/31/2026
+//send recorded audio for processing and receive
+
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
+import { CameraBox } from "./userInput"
+import { SendAudioToServer } from "./behavioralService";
+import { FeedbackCategory } from "./feedbackItem";
+import type { FeedbackItem } from "./feedbackItem";
+
 
 //-------------------------------------
 //  Functionality
@@ -33,49 +41,19 @@ function OnFailedStartInterview() {
 }
 
 
-
-enum FeedbackCategory {
-    NONE = "None",
-    NOTES = "Notes",
-    EYE_CONTACT = "Eye Contact",
-    CONFIDENCE = "Confidence",
-    QUALITY_OF_ANSWERS = "Quality of Answers",
-    SOCIABILITY = "Sociability",
-    CLEAR_SPEECH = "Clear Speech"
-
-}
-
-type FeedbackItem = {
-    key: FeedbackCategory,
-    content: string,
-    score: number
-}
-
-async function OnEndInterviewClicked(): Promise<FeedbackItem[]> {
-
-    //TODO:
+async function OnFeedbackPageLoad(audioData: Blob): Promise<FeedbackItem[]> {
     //Send audio and camera to server
-    //Request analysis and receive feedback
+    //Receive analysis/feedback
+    //page.tsx > behavioralService.tsx > api/behavioral/uploadAudio/route.ts
+    const fbItems: FeedbackItem[] = await SendAudioToServer(audioData);
 
-    //test items in place of actual data
-    const test_items = [
-        { key: FeedbackCategory.NOTES, content: "Example paragraph. This is where you will see a description of your interview.", score : 1 },
-        { key: FeedbackCategory.EYE_CONTACT, content: "", score : 1 },
-        { key: FeedbackCategory.CONFIDENCE, content: "", score : 2 },
-        { key: FeedbackCategory.QUALITY_OF_ANSWERS, content: "", score : 3 },
-        { key: FeedbackCategory.SOCIABILITY, content: "", score : 4 },
-        { key: FeedbackCategory.CLEAR_SPEECH, content: "", score : 5 },
-
-    ];
-
-    //return stub promise
     return new Promise((resolve) => {
-        setTimeout(() => resolve(test_items), 10);
+        setTimeout(() => resolve(fbItems), 10);
     });
 };
 
 function OnFailedEndInterview() {
-    console.log("Faled Upload");
+    console.log("Faled End Interview");
 }
 
 //-------------------------------------
@@ -111,32 +89,52 @@ enum BIPageState {
 
 function ViewSwitcher() {
 
+    /*
+        Switch between page states for Before, During, and After the interview.
+        Also pass recorded data and the prompt between page states.
+    */
+
     const [pageState, setPageState] = useState(BIPageState.START);
-
-    //Helps set useState typing
-    const test_items = [
-        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1}
-    ];
-
-    const [feedbackData, setFeedbackData] = useState(test_items);
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
+    const audioRef = useRef<Blob | null>(null);
+
+    //use deferred promise so that BIEnd can wait until
+    //the audio is ready from BIActive before attempting to upload
+    function waitForAudio(): Promise<Blob> {
+        return new Promise((resolve) => {
+            if (audioRef.current) {
+                resolve(audioRef.current);
+                return;
+            }
+
+            //wait for 50 ticks before checking again
+            const interval = setInterval(() => {
+                if (audioRef.current) {
+                    clearInterval(interval);
+                    resolve(audioRef.current);
+                }
+            }, 50);
+        });
+    }
+
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} changeFeedbackData={setFeedbackData} prompt={interviewPrompt} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} />);
 
         case BIPageState.END:
-            return (<BIEnd changeState={setPageState} data={feedbackData} />);
+            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} />);
     }
 }
 
-function BIStart({ changeState, changePrompt }: {
+function BIStart({ changeState, changePrompt, audioRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
+    audioRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
 }) {
 
     const StartInterviewButton = async () => {
@@ -156,30 +154,32 @@ function BIStart({ changeState, changePrompt }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox />
+            <CameraBox recordAudio={false} audioRef={audioRef} />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
     );
 }
 
-function BIActive({ changeState, changeFeedbackData, prompt }: {
+function BIActive({ changeState, prompt, audioRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    changeFeedbackData: React.Dispatch<React.SetStateAction<FeedbackItem[]>>;
+    audioRef: React.RefObject<Blob | null>;
     prompt: string;
 }) {
-
+    useEffect(() => {
+        audioRef.current = null;
+    }, []);
 
     const EndInterviewButton = async () => {
         try {
-            //Try and Wait For Upload
-            const result = await OnEndInterviewClicked();
 
-            //store data in useState
-            changeFeedbackData(result);
+            //Change state if successful, send data as we enter the next page
+            //The audio data is triggered by the re-render for the next page state
+            //A useEffect cleanUp for the audio recording will set the audioData as the new
+            //Page is rendered
 
-            //Change state if successful
             changeState(BIPageState.END);
         } catch (error) {
+            console.log(error);
             OnFailedEndInterview();
         }
     };
@@ -197,7 +197,7 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <CameraBox />
+            <CameraBox recordAudio={true} audioRef={audioRef} />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>
@@ -208,10 +208,57 @@ function BIActive({ changeState, changeFeedbackData, prompt }: {
     );
 }
 
-function BIEnd({ changeState, data }: {
+function BIEnd({ changeState, waitForAudio }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
-    data: FeedbackItem[];
+    waitForAudio: () => Promise<Blob>;
 }) {
+    //Helps set useState typing
+    const test_items = [
+        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
+    ];
+
+    //Modified for UC 1 to include loading and error states
+    const [data, setFeedbackData] = useState(test_items);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(false);
+
+    useEffect(() => { //Call once on page state load
+
+        console.log("CALLING USE EFFECT FOR BI END");
+
+        async function UploadAudio() {
+            try {
+                setLoading(true);
+
+                //Try and Wait For Upload
+                //Send the audio data previously set by the useEffect cleanup in
+                //The Active page state to the server to be transcribed.
+                console.log("Waiting for audioData to resolve.")
+
+                const audioData = await waitForAudio(); //await for the audio data to be sent by BIActive
+
+                console.log("Waiting for audioData to be analyzed")
+
+                const result = await OnFeedbackPageLoad(audioData);//await for the audio data to be uploaded
+
+                console.log("Setting feedback...")
+
+                //store data in useState
+                setFeedbackData(result);
+                setLoading(false);
+            } catch (err) {
+                setLoading(false);
+                setError(true);
+                console.error(err);
+            }
+        }
+
+        UploadAudio();
+
+        
+    },
+
+    [])
 
     const RestartInterviewButton = async () => {
         changeState(BIPageState.START);
@@ -291,150 +338,33 @@ function BIEnd({ changeState, data }: {
         <div className={`${styles.centered_column} w-full`}>
             <RecordedVideoBox />
             <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
-            <DataDisplay data={data}/>
+
+            {loading && (
+                <div>
+                Loading feedback...
+                </div>
+            )}
+
+            {!loading && !error && (
+                <DataDisplay data={data} />
+            )}
+
+            {error  && (
+                <div>
+                    Failed to load feedback!
+                </div>
+            )}
+
+            
         </div>
     );
 
 }
 
-import { useEffect, useRef } from "react";
-
-function CameraBox() {
-    const videoRef = useRef<HTMLVideoElement | null>(null);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let stream: MediaStream;
-
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: false,
-                });
-
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            } catch (err) {
-                setError('Camera access denied or unavailable');
-                console.error(err);
-            }
-        }
-
-        startCamera();
-
-        return () => {
-            // Stop camera when component unmounts
-            stream?.getTracks().forEach(track => track.stop());
-        }
-    }, [])
-
-    if (error) {
-        return <p>{error}</p>
-    }
-
-    return (
-        <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
-            <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full max-w-md rounded"
-            />
-            <AudioMeter/>
-        </div>
-       
-    )
-}
-
-function AudioMeter() {
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const animationRef = useRef<number | null>(null);
-
-    const [level, setLevel] = useState(0);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        let stream: MediaStream;
-
-        async function startAudio() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: false,
-                });
-                
-                const audioContext = new AudioContext();
-                const source = audioContext.createMediaStreamSource(stream);
-                const analyser = audioContext.createAnalyser();
-
-                analyser.fftSize = 256;
-
-                source.connect(analyser);
-
-                audioContextRef.current = audioContext;
-                analyserRef.current = analyser;
-
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-                const updateMeter = () => {
-                    analyser.getByteTimeDomainData(dataArray);
-
-                    // RMS (volume)
-                    let sumSquares = 0;
-                    for (let i = 0; i < dataArray.length; i++) {
-
-                        const val = dataArray?.[i] ?? 128;
-                        const v = (val - 128) / 128;
-                        sumSquares += v * v;
-                    }
-
-                    const rms = Math.sqrt(sumSquares / dataArray.length);
-                    setLevel(Math.min(100, Math.round(rms * 100)));
-
-                    animationRef.current = requestAnimationFrame(updateMeter);
-                }
-
-                updateMeter();
-            } catch (err) {
-                setError('Microphone access denied or unavailable');
-                console.error(err);
-            }
-        }
-
-        startAudio();
-
-        return () => {
-            stream?.getTracks().forEach(track => track.stop());
-            audioContextRef.current?.close();
-            if (animationRef.current) {
-                cancelAnimationFrame(animationRef.current);
-            }
-        }
-    }, [])
-
-    if (error) return <p>{error}</p>
-
-    return (
-        <div className="w-48">
-            <div className="h-3 bg-gray-300 rounded">
-                <div
-                    className="h-3 bg-green-500 rounded transition-all"
-                    style={{ width: `${level}%` }}
-                />
-            </div>
-            <p className="text-sm mt-1">Level: {level}%</p>
-        </div>
-    )
-}
-
 function RecordedVideoBox() {
     return (
         <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
-            <VideoPlayer/>
+            <VideoPlayer />
         </div>
     );
 }
@@ -467,3 +397,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </video>
     );
 };
+
+
+
