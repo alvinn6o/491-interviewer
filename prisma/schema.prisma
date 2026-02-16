@@ -144,12 +144,30 @@ model InterviewResponse {
 }
 
 model TechnicalQuestion {
-  id         String   @id @default(cuid())
-  question   String
-  difficulty String
-  category   String
-  answer     String?
-  createdAt  DateTime @default(now())
+  id           String   @id
+  slug         String   @unique // ex: problem name in url "3sum"
+  title        String           // ex: 9. 3Sum
+  description  String   @db.Text
+  difficulty   String
+  category     String
+  starterCode  Json
+  functionName String           //ex: string("twoSum")
+  params       Json
+  outputType   String
+  createdAt    DateTime @default(now())
+
+  testCases    TestCase[]
+}
+
+model TestCase {
+  id             String   @id @default(cuid())
+  input          Json     //Input params.. ex: {"nums": [2, 7, 11, 15]}
+  expectedOutput String
+  isHidden       Boolean  @default(false)
+
+  //Foreign Key
+  problemId      String
+  problem        TechnicalQuestion @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }
 
 model InterviewReport {
