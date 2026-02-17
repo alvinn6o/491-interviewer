@@ -11,7 +11,7 @@ import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
 import { CameraBox } from "./userInput"
-import { SendAudioToServer } from "./behavioralService";
+import { SendAudioToServer, GetPrompt, CreateSession } from "./behavioralService";
 import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 
@@ -23,17 +23,20 @@ import type { FeedbackItem } from "./feedbackItem";
 async function OnStartInterviewClicked(): Promise<string> {
 
     //TODO:
-    //Establish connection to server
     //Begin camera and audio recording
-    //Get Interview Prompt from server
+
+    //TODO: test session
+    const newSession = await CreateSession();
 
     //dummy data in place of actual response
-    const prompt = "This is where I would place the interview question or prompt. If I had one!";
+    //const prompt = "This is where I would place the interview question or prompt. If I had one!";
+    //Get Interview Prompt from server
+    const prompt = await GetPrompt();
 
-    //return stub promise
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(prompt), 10);
-    });
+    if (!prompt.success)
+        console.log("Failed to get prompt: " + prompt.prompt);
+
+    return prompt.prompt;
 };
 
 function OnFailedStartInterview() {
@@ -47,9 +50,7 @@ async function OnFeedbackPageLoad(audioData: Blob): Promise<FeedbackItem[]> {
     //page.tsx > behavioralService.tsx > api/behavioral/uploadAudio/route.ts
     const fbItems: FeedbackItem[] = await SendAudioToServer(audioData);
 
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(fbItems), 10);
-    });
+    return fbItems;
 };
 
 function OnFailedEndInterview() {
