@@ -46,15 +46,22 @@ export async function SendAudioToServer(audioData: Blob) {
 
 //Get prompt from database
 export async function GetPrompt() {
+    try {
+        const response = await fetch("/api/behavioral/prompt", {
+            method: "GET"
+        });
 
-    const response = await fetch("/api/behavioral/prompt", {
-        method: "GET"
-    });
+        console.log("got prompt");
 
-    console.log("got prompt");
-    console.log(response.json());
+        const json = response.json();
 
-    return response.json();
+        console.log(json);
+
+        return json;
+    } catch (err) {
+        throw err;
+    }
+    
 }
 
 export async function SaveSession(audioData: Blob, videoData: any) {
@@ -89,6 +96,16 @@ export async function SaveSession(audioData: Blob, videoData: any) {
 
 export async function CreateSession() {
     const response = await fetch("/api/behavioral/create", {
+        method: "POST"
+    });
+
+    return response.json();
+}
+
+export async function StoreSession(sessionId: string) {
+    console.log("store session id: " + sessionId);
+
+    const response = await fetch(`/api/behavioral/store/${sessionId}`, {
         method: "POST"
     });
 

@@ -20,6 +20,9 @@ export async function POST() {
                     type: "BEHAVIORAL",
                     userId: session.user.id,
                     status: "IN_PROGRESS"
+                },
+                select: {
+                    id: true,
                 }
             }
         );

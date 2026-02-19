@@ -11,7 +11,7 @@ import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
 import { CameraBox } from "./userInput"
-import { SendAudioToServer, GetPrompt, CreateSession } from "./behavioralService";
+import { SendAudioToServer, GetPrompt, CreateSession, StoreSession } from "./behavioralService";
 import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 
@@ -20,38 +20,69 @@ import type { FeedbackItem } from "./feedbackItem";
 //  Functionality
 //-------------------------------------
 
-async function OnStartInterviewClicked(): Promise<string> {
+async function OnStartInterviewClicked(): Promise<any> {
 
     //TODO:
-    //Begin camera and audio recording
+    //Begin camera recording
 
-    //TODO: test session
-    const newSession = await CreateSession();
-
-    //dummy data in place of actual response
-    //const prompt = "This is where I would place the interview question or prompt. If I had one!";
     //Get Interview Prompt from server
     const prompt = await GetPrompt();
 
-    if (!prompt.success)
-        console.log("Failed to get prompt: " + prompt.prompt);
+    if (!prompt.success) {
+        console.log("Failed to get prompt.");
 
-    return prompt.prompt;
+        throw new Error("Fetch Prompt Failed.")
+    }
+
+    //Create a new session on the server
+    //TODO: return active session if any
+    const newSession = await CreateSession();
+
+    if (!newSession) {
+        console.log("Failed to create new session!");
+
+        throw new Error("Create Session Failed.");
+    }
+
+    console.log("New session created. ID: " + newSession.id);
+
+    prompt.session = newSession;
+
+    return prompt;
 };
 
-function OnFailedStartInterview() {
-    console.log("Faled Upload");
+function OnFailedStartInterview(error : any) {
+    console.log(error);
 }
 
 
-async function OnFeedbackPageLoad(audioData: Blob): Promise<FeedbackItem[]> {
+async function OnFeedbackPageLoad(audioData: Blob, sessionId: string): Promise<FeedbackItem[]> {
     //Send audio and camera to server
     //Receive analysis/feedback
     //page.tsx > behavioralService.tsx > api/behavioral/uploadAudio/route.ts
+    console.log("send to server");
+
     const fbItems: FeedbackItem[] = await SendAudioToServer(audioData);
 
+    console.log("update session ID: " + sessionId);
+
+    //Update session on DB with completed time
+    //and progress status
+    try {
+        const updatedSession = await StoreSession(sessionId);
+
+        console.log("updated session");
+
+        if (updatedSession)
+            console.log(updatedSession);
+    }
+    catch (err) {
+        console.log("Error:")
+        console.log(err);
+    }
+
     return fbItems;
-};
+}
 
 function OnFailedEndInterview() {
     console.log("Faled End Interview");
@@ -99,6 +130,8 @@ function ViewSwitcher() {
 
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
 
+    const [sessionId, setSessionId] = useState("");
+
     const audioRef = useRef<Blob | null>(null);
 
     //use deferred promise so that BIEnd can wait until
@@ -122,20 +155,22 @@ function ViewSwitcher() {
 
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} />);
 
         case BIPageState.ACTIVE:
             return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} />);
 
         case BIPageState.END:
-            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} />);
+            console.log("Loading END with id: " + sessionId);
+            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} sessionId={sessionId} />);
     }
 }
 
-function BIStart({ changeState, changePrompt, audioRef }: {
+function BIStart({ changeState, changePrompt, audioRef, setSessionId }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
     audioRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
+    setSessionId: React.Dispatch<React.SetStateAction<string>>;
 }) {
 
     const StartInterviewButton = async () => {
@@ -144,12 +179,18 @@ function BIStart({ changeState, changePrompt, audioRef }: {
             const result = await OnStartInterviewClicked();
 
             //Set response as prompt
-            changePrompt(result);
+            changePrompt(result.prompt);
+
+            console.log("setting id: " + result.session.id);
+
+            setSessionId(result.session.id)
 
             //Change state if successful
             changeState(BIPageState.ACTIVE);
         } catch (error) {
-            OnFailedStartInterview();
+
+            OnFailedStartInterview(error);
+
         }
     };
 
@@ -209,9 +250,10 @@ function BIActive({ changeState, prompt, audioRef }: {
     );
 }
 
-function BIEnd({ changeState, waitForAudio }: {
+function BIEnd({ changeState, waitForAudio, sessionId }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     waitForAudio: () => Promise<Blob>;
+    sessionId: string;
 }) {
     //Helps set useState typing
     const test_items = [
@@ -238,9 +280,9 @@ function BIEnd({ changeState, waitForAudio }: {
 
                 const audioData = await waitForAudio(); //await for the audio data to be sent by BIActive
 
-                console.log("Waiting for audioData to be analyzed")
+                console.log("Waiting for audioData to be analyzed with session ID: " + sessionId)
 
-                const result = await OnFeedbackPageLoad(audioData);//await for the audio data to be uploaded
+                const result = await OnFeedbackPageLoad(audioData, sessionId);//await for the audio data to be uploaded
 
                 console.log("Setting feedback...")
 

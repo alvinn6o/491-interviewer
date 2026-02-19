@@ -6,6 +6,15 @@ import { db } from "~/server/db";
 
 export async function GET() {
 
+    return NextResponse.json(
+        {
+            success: true,
+            prompt: "TODO: fill DB with prompts."
+        }
+    );
+
+    //TODO: modify to use custom prompt
+    /*
     const prompts = await db.technicalQuestion.findMany();
 
     const min = 0;
@@ -47,6 +56,6 @@ export async function GET() {
             success: false,
             prompt: "Failed to get a prompt. prompt was null."
         }
-    );
+    );*/
 }
     
