@@ -1,14 +1,18 @@
 ﻿//Author: Brandon Christian
 //Date: 1-30-2026
 //Handle API or DB requests between the user and the server
+
 //Date: 1-31-2026
 //Send result to client
+
 //Date: 2/17/2026
 //GET prompt from DB
 
+//Date: 2/19/2026
+//Change api point "store" to "end"
+
 import type { FeedbackItem } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
-
 
 export async function SendAudioToServer(audioData: Blob) {
     //Extract the file extension
@@ -25,7 +29,7 @@ export async function SendAudioToServer(audioData: Blob) {
     );
 
     //TODO: remove early end
-    //saves api call costs.
+    //saves api call costs during testing.
     return [CreateFeedbackItem("remove line 28 in behavioralService.tsx", "interrupt before api call to save costs during testing.", 1)];
 
     console.log("about to send blob to back end");
@@ -102,10 +106,8 @@ export async function CreateSession() {
     return response.json();
 }
 
-export async function StoreSession(sessionId: string) {
-    console.log("store session id: " + sessionId);
-
-    const response = await fetch(`/api/behavioral/store/${sessionId}`, {
+export async function EndSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/end/${sessionId}`, {
         method: "POST"
     });
 

@@ -9,13 +9,13 @@ import { auth } from "src/server/auth"
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { currentsession: string } }
+    { params }: { params: { sessionId: string } }
 ) {
-    const { currentsession } = params;
+    const { sessionId } = params;
 
     const session = await auth();
 
-    console.log("interiew session id: " + currentsession)
+    console.log("interiew session id: " + sessionId)
 
     if (session && session.user) {
         //Update the first session whose ID matches the one we
@@ -23,7 +23,7 @@ export async function POST(
         const interviewSession = await db.interviewSession.update({
             where: {
                 userId: session.user.id,
-                id: currentsession,
+                id: sessionId,
             },
             data: {
                 completedAt: new Date(),
@@ -42,7 +42,7 @@ export async function POST(
             );
         }
         else {
-            console.log("failed to find session. id: " + currentsession)
+            console.log("failed to find session. id: " + sessionId)
         }
         
     }
