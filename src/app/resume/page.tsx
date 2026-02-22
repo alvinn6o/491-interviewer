@@ -1,160 +1,21 @@
 ﻿//Author: Brandon Christian
 //Date: 12/12/2025
 
+//TODO: Lockout upload buttons while uploading
 
 "use client";
 import { useState } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
-
-
-//-------------------------------------
-//  Functionality
-//-------------------------------------
-
-interface UploadResult {
-    success: true;
-    fileName: string;
-    extractedText: string;
-    textLength: number;
-}
-
-interface UploadError {
-    success: false;
-    error: string;
-}
-
-type UploadResponse = UploadResult | UploadError;
-
-async function OnUploadResumeClicked(): Promise<UploadResponse> {
-    try {
-        const file = await WaitForFile();
-        console.log("Selected file:", file);
-
-        // Send file to server
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch("/api/resume/upload", {
-            method: "POST",
-            body: formData,
-        });
-
-        const result = await response.json();
-
-        if (!result.success) {
-            return {
-                success: false,
-                error: result.error?.message || "Upload failed",
-            };
-        }
-
-        return {
-            success: true,
-            fileName: result.data.fileName,
-            extractedText: result.data.extractedText,
-            textLength: result.data.textLength,
-        };
-    } catch (err) {
-        console.error("Upload error:", err);
-        return {
-            success: false,
-            error: err instanceof Error ? err.message : "Upload failed",
-        };
-    }
-}
-
-export async function WaitForFile(): Promise<File> {
-    return new Promise((resolve, reject) => {
-        const input = document.createElement("input");
-        input.type = "file";
-        input.accept = ".pdf,.docx,.txt";
-
-        input.onchange = () => {
-            const file = input.files?.item(0);
-
-            if (!file) {
-                reject(new Error("No file selected"));
-                return;
-            }
-
-            resolve(file);
-        };
-
-        input.onerror = () => reject(new Error("File selection failed"));
-
-        input.click();
-    });
-}
+import { OnUploadResumeClicked, OnAddJobDescriptionClicked } from "./uploadResume"
+import type { FeedbackItem } from "./feedbackItem"
+import { FeedbackCategory } from "./feedbackItem"
 
 function OnFailedUpload() {
     //Used for failed upload of resume and job description
     console.log("Faled Upload");
 }
-
-enum FeedbackCategory {
-    NONE = "none",
-    ATS_SCORE = "ats_score",
-    SKILLS_MATCH = "skills_match",
-    FORMATTING = "formatting",
-    RECRUITER_TIPS = "recruiter_tips",
-    KEYWORDS = "keywords",
-    MATCH_SCORE = "match_score"
-}
-
-type FeedbackItem = {
-    key: FeedbackCategory
-    name: string;
-    description: string;
-    status: boolean;
-};
-
-async function OnAddJobDescriptionClicked(job_desc: string): Promise<FeedbackItem[]> {
-
-    //TODO:
-    //Send job_desc to server
-    //Use resume and job_desc to get feedback as array of FeedbackItem
-    //return FeedbackItems[] to view
-
-    //IMPORTANT:
-    //data is expected to be returned as an array of objects of type FeedbackItem
-    //separate the data using the key property of FeedbackItem
-
-    //test data in place of actual response
-    const test_items = [
-        { key: FeedbackCategory.MATCH_SCORE, name: "none", description: "50%", status: true },
-
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 1", description: "ATS_SCORE Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 2", description: "ATS_SCORE Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 3", description: "ATS_SCORE Lorem Ipsum 3", status: true },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 4", description: "ATS_SCORE Lorem Ipsum 4", status: false },
-        { key: FeedbackCategory.ATS_SCORE, name: "Item 5", description: "ATS_SCORE Lorem Ipsum 5", status: false },
-
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 1", description: "SKILLS_MATCH Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 2", description: "SKILLS_MATCH Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.SKILLS_MATCH, name: "Item 3", description: "SKILLS_MATCH Lorem Ipsum 3", status: true },
-
-        { key: FeedbackCategory.FORMATTING, name: "Item 1", description: "FORMATTING Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.FORMATTING, name: "Item 2", description: "FORMATTING Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.FORMATTING, name: "Item 3", description: "FORMATTING Lorem Ipsum 3", status: true },
-        { key: FeedbackCategory.FORMATTING, name: "Item 4", description: "FORMATTING Lorem Ipsum 4", status: false },
-
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 1", description: "RECRUITER_TIPS Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 2", description: "RECRUITER_TIPS Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.RECRUITER_TIPS, name: "Item 3", description: "RECRUITER_TIPS Lorem Ipsum 3", status: true },
-
-        { key: FeedbackCategory.KEYWORDS, name: "Item 1", description: "KEYWORDS Lorem Ipsum 1", status: true },
-        { key: FeedbackCategory.KEYWORDS, name: "Item 2", description: "KEYWORDS Lorem Ipsum 2", status: false },
-        { key: FeedbackCategory.KEYWORDS, name: "Item 3", description: "KEYWORDS Lorem Ipsum 3", status: true }
-    ];
-
-    //return stub promise
-    return new Promise((resolve) => {
-        setTimeout(() => resolve(test_items), 10);
-    });
-};
-
 
 
 //-------------------------------------
@@ -187,6 +48,9 @@ enum UploadPageState {
 
 function ViewSwitcher() {
 
+    /*switch page state between upload resume, job desc, and feedback (results)
+    also pass data between these states*/
+
     const [uploadState, setUploadState] = useState(UploadPageState.UPLOAD);
 
     //Helps set useState typing
@@ -196,32 +60,16 @@ function ViewSwitcher() {
 
     const [feedbackData, setFeedbackData] = useState(test_items);
 
-    // Store extracted resume text for later use in ATS scoring
-    const [resumeText, setResumeText] = useState<string>("");
-    const [resumeFileName, setResumeFileName] = useState<string>("");
+    const [resumeText, setResumeText] = useState("")
+    const [resumeFileName, setResumeFileName] = useState("")
 
 
     switch (uploadState) {
         case UploadPageState.UPLOAD:
-            return (
-                <UploadBox
-                    changeState={setUploadState}
-                    onResumeUploaded={(text, fileName) => {
-                        setResumeText(text);
-                        setResumeFileName(fileName);
-                    }}
-                />
-            );
+            return (<UploadBox changeState={setUploadState} changeResumeText={setResumeText} changeResumeFileName={setResumeFileName} />);
 
         case UploadPageState.ADD_JOB_DESC:
-            return (
-                <AddJobDescriptionBox
-                    changeState={setUploadState}
-                    changeFeedbackData={setFeedbackData}
-                    resumeText={resumeText}
-                    resumeFileName={resumeFileName}
-                />
-            );
+            return (<AddJobDescriptionBox changeState={setUploadState} changeFeedbackData={setFeedbackData} resumeText={resumeText} resumeFileName={resumeFileName} />);
 
         case UploadPageState.FEEDBACK:
             return (<ViewFeedbackBox changeState={setUploadState} data={feedbackData} />);
@@ -260,38 +108,46 @@ function Instructions() {
     )
 }
 
-function UploadBox({
-    changeState,
-    onResumeUploaded,
-}: {
+function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
     changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
-    onResumeUploaded: (text: string, fileName: string) => void;
+    changeResumeText: React.Dispatch<React.SetStateAction<string>>;
+    changeResumeFileName: React.Dispatch<React.SetStateAction<string>>;
 }) {
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+
+    const [isEmpty, setEmpty] = useState(false);
+    const [isValid, setValid] = useState(true);
+    const [isLoading, setLoading] = useState(false);
 
     const UploadResumeButton = async () => {
-        setError(null);
-        setIsLoading(true);
-
         try {
+            //Try and Wait For Upload
+            setLoading(true);
+
             const result = await OnUploadResumeClicked();
 
+            setLoading(false);
+
+            //catch error
             if (!result.success) {
-                setError(result.error);
+                setValid(false);
+                return;
+            }
+
+            //Disallow empty
+            if (result.extractedText == "") {
+                setEmpty(true);
                 return;
             }
 
             console.log("Upload successful:", result.fileName, `(${result.textLength} chars)`);
+            changeResumeText(result.extractedText);
+            changeResumeFileName(result.fileName);
 
-            // Store the extracted text and advance state
-            onResumeUploaded(result.extractedText, result.fileName);
+            //Change state if successful
             changeState(UploadPageState.ADD_JOB_DESC);
-        } catch (err) {
-            setError("An unexpected error occurred");
-            console.error(err);
-        } finally {
-            setIsLoading(false);
+        } catch (error: any) {
+            console.log(error);
+            OnFailedUpload();
         }
     };
 
@@ -300,19 +156,32 @@ function UploadBox({
             <br />
             <h2>Upload Your Resume</h2>
             <h1>↑</h1>
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-2">
-                    {error}
+
+            {isLoading && (
+                <div>
+                Uploading...
                 </div>
             )}
-            <button
-                className="orange_button"
-                onClick={UploadResumeButton}
-                disabled={isLoading}
-            >
-                {isLoading ? "Uploading..." : "Upload Resume"}
-            </button>
-            <p className="sub-description">.pdf, .docx, or .txt file</p>
+
+            {!isLoading && (
+                <div className={`${styles.centered_column}`}>
+                    <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
+                    <p className="sub-description"> .pdf, .docx, or .txt file</p>
+
+                    {isEmpty && (
+                        <div>
+                            Resume was empty. Please upload a document with text.
+                        </div>)}
+
+                    {!isValid && (
+                        <div>
+                            Invalid file or file type. Please try again.
+                        </div>)}
+                </div>
+
+            )}
+
+            
         </div>
     )
 }
@@ -333,18 +202,30 @@ function AddJobDescriptionBox(
             resumeFileName: string;
         }
 ) {
-    // Log resume info for debugging (will be used for ATS scoring in later tasks)
-    console.log("Resume ready for analysis:", resumeFileName, `(${resumeText.length} chars)`);
+
+    const [isEmpty, setEmpty] = useState(false);
+    const [isLoading, setLoading] = useState(false);
 
     const AddJobDescButton = async () => {
         try {
+            //Disallow empty
+            if (template == "") {
+                setEmpty(true);
+                return;
+            }
+
+            setLoading(true);
+
             //Wait For Upload
-            const result = await OnAddJobDescriptionClicked(template);
+            const result = await OnAddJobDescriptionClicked(resumeText, template, resumeFileName);
+
+            setLoading(false);
 
             //Change state if successful
             changeState(UploadPageState.FEEDBACK);
             changeFeedbackData(result);
-        } catch (error) {
+        } catch (error: any) {
+            console.log(error);
             OnFailedUpload();
         }
     };
@@ -353,26 +234,45 @@ function AddJobDescriptionBox(
 
     return (
         <div style={{ width: '50%' }} className={`${styles.centered_column} rounded outline-2`}>
-            <br/>
+            <br />
             <h2>Add Job Description</h2>
-            <textarea
-                style={{ width: '90%', height: '150px' }}
-                className="outline-1"
-                placeholder="Enter job description..."
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-            />
-            <span className={styles.centered_row}>
-                <span>
-                    <label htmlFor="templates">Templates: </label>
-                    <select name="Templates" id="templates" className="outline-1" onChange={(e) => setTemplate(e.target.value) }>
-                        <option value={JobDescriptionTemplate.NONE}>None</option>
-                        <option value={JobDescriptionTemplate.SOFTWARE_ENGINEER}>Software Engineer</option>
-                        <option value={JobDescriptionTemplate.DATA_SCIENTIST}>Data Scientist</option>
-                    </select>
-                </span>
-                <button type="submit" onClick={AddJobDescButton} className="orange_button">Add Job Description</button>
-            </span>
+            {isLoading && (
+                <div>
+                    Uploading...
+                </div>
+            )}
+
+            {!isLoading && (
+                <div className={`${styles.centered_column}`}>
+                    <textarea
+                        style={{ width: '90%', height: '150px' }}
+                        className="outline-1"
+                        placeholder="Enter job description..."
+                        value={template}
+                        onChange={(e) => setTemplate(e.target.value)}
+                    />
+                    <span className={styles.centered_row}>
+                        <div>
+                            <label htmlFor="templates">Templates: </label>
+                            <select name="Templates" id="templates" className="outline-1" onChange={(e) => setTemplate(e.target.value)}>
+                                <option value={JobDescriptionTemplate.NONE}>None</option>
+                                <option value={JobDescriptionTemplate.SOFTWARE_ENGINEER}>Software Engineer</option>
+                                <option value={JobDescriptionTemplate.DATA_SCIENTIST}>Data Scientist</option>
+                            </select>
+                        </div>
+                        <button type="submit" onClick={AddJobDescButton} className="orange_button">Add Job Description</button>
+
+                       
+
+                    </span>
+                    {isEmpty && (
+                        <div>
+                            Job description is empty. Please enter a description or choose a template.
+                        </div>
+                    )}
+                </div>
+            ) }
+           
             <br/>
         </div>
 
