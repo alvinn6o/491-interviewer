@@ -12,7 +12,7 @@ import { useEffect } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
-import { CameraBox } from "./userInput"
+import { AudioMeterAndCameraBox } from "./userInput"
 import { BIPageState, OnFailedEndInterview } from "./main";
 
 
@@ -54,7 +54,7 @@ export function BIActive({ changeState, prompt, audioRef }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <CameraBox recordAudio={true} audioRef={audioRef} />
+            <AudioMeterAndCameraBox recordAudio={true} audioRef={audioRef} />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>

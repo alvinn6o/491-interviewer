@@ -16,9 +16,10 @@ import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
 import { SendAudioToServer , EndSession} from "./behavioralService";
 
-export function BIEnd({ changeState, waitForAudio, sessionId }: {
+export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     waitForAudio: () => Promise<Blob>;
+    waitForVideo: () => Promise<Blob>;
     sessionId: string;
 }) {
     //Helps set useState typing
@@ -64,8 +65,6 @@ export function BIEnd({ changeState, waitForAudio, sessionId }: {
         }
 
         UploadAudio();
-
-        
     },
 
     [])

@@ -9,7 +9,7 @@
 
 import styles from "./test.module.css";
 import React from "react";
-import { CameraBox } from "./userInput";
+import { AudioMeterAndCameraBox } from "./userInput";
 import { BIPageState, OnStartInterviewClicked, OnFailedStartInterview } from "./main";
 
 
@@ -44,7 +44,7 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox recordAudio={false} audioRef={audioRef} />
+            <AudioMeterAndCameraBox recordAudio={false} audioRef={audioRef} />
             <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
         </div>
     );
