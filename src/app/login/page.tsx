@@ -3,24 +3,37 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  // React state store user input
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Handle Login form submission
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("rememberedEmail");
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   async function handleLogin(event: React.FormEvent) {
-    event.preventDefault(); // Prevent browser reload
+    event.preventDefault();
     setError(null);
     setLoading(true);
+
+    if (rememberMe) {
+      localStorage.setItem("rememberedEmail", email);
+    } else {
+      localStorage.removeItem("rememberedEmail");
+    }
 
     try {
       const result = await signIn("credentials", {
@@ -44,14 +57,10 @@ export default function LoginPage() {
 
   return (
     <main className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-200 via-orange-300 to-orange-400">
-
-      {/* Login Form */}
       <form
         onSubmit={handleLogin}
         className="flex flex-col gap-4 w-full max-w-sm bg-white p-8 rounded shadow"
       >
-
-      {/* Logo + Title */}
         <div className="flex flex-col items-center gap-3 mb-2">
           <img
             src="/images/landing/skill-skift-card.png"
@@ -65,7 +74,6 @@ export default function LoginPage() {
           <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>
         )}
 
-        {/* Email Input */}
         <input
           className="border rounded p-3 w-full"
           type="email"
@@ -75,7 +83,6 @@ export default function LoginPage() {
           required
         />
 
-        {/* Password Input */}
         <input
           className="border rounded p-3 w-full"
           type="password"
@@ -85,7 +92,6 @@ export default function LoginPage() {
           required
         />
 
-        {/* Login Button */}
         <button
           className="orange_button w-full disabled:opacity-60"
           type="submit"
@@ -94,19 +100,20 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {/* Remeber me? */}
         <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2 text-gray-600">
+          <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
             <input
               type="checkbox"
               className="accent-orange-500"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
             />
             Remember me?
           </label>
 
           <Link href="/forgot-password" title="Recover password" className="text-blue-600 hover:underline">
-          Forgot password?
-        </Link>
+            Forgot password?
+          </Link>
         </div>
 
         <p className="text-sm text-center mt-2">
