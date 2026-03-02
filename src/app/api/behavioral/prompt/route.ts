@@ -8,18 +8,18 @@ export async function GET() {
 
     console.log("GET prompt called");
 
-    return NextResponse.json(
+    /*return NextResponse.json(
         {
             success: true,
             prompt: "TODO: fill DB with prompts."
         }
-    );
+    );*/
 
     //TODO: modify to use custom prompt
-    /*
-    const prompts = await db.technicalQuestion.findMany();
+    
+    const prompts = await db.behavioralPrompt.findMany();
 
-    const min = 0;
+    const min = 1;
     const max = prompts.length;
 
     if (max == 0)
@@ -30,14 +30,18 @@ export async function GET() {
             }
         );
 
-    const id = Math.random() * (max - min) + min;
+    console.log("got " + prompts.length + " prompts ")
+
+    const id = Math.floor(Math.random() * (max - min) + min);
+
+    console.log("getting " + id + " prompt ")
 
     const prompt = prompts[id];
 
    
     if (prompt) {
         //send to behavioralSerice.tsx
-        if (prompt.question == "")
+        if (prompt.prompt == "")
             return NextResponse.json(
                 {
                     success: false,
@@ -48,7 +52,7 @@ export async function GET() {
         return NextResponse.json(
             {
                 success: true,
-                prompt: prompt.question
+                prompt: prompt.prompt
             }
         );
     }
@@ -58,6 +62,6 @@ export async function GET() {
             success: false,
             prompt: "Failed to get a prompt. prompt was null."
         }
-    );*/
+    );
 }
     
