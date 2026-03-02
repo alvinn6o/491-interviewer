@@ -9,8 +9,6 @@ import { auth } from "src/server/auth"
 
 export async function POST() {
 
-    const prompts = await db.technicalQuestion.findMany();
-
     const session = await auth();
 
     if (session && session.user) {

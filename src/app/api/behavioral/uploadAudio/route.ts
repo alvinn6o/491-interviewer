@@ -21,17 +21,15 @@ export async function POST(req: NextRequest) {
     }
 
     //Process Audio
-    const text = await ProcessAudioToText(audio);
+    //TODO: process call is hidden to save costs on API calls during testing
+    //const text = await ProcessAudioToText(audio);
+    //const tokensByCount = ProcessTextToTokens(text);
 
-    //TODO: send result to Behavioral Analysis
+    //TODO: send processed results to Behavioral Analysis
 
-    const tokensByCount = ProcessTextToTokens(text);
-
-    //TODO: send result to Behavioral Analysis
-
-    //test items in place of actual data
+    //TODO: test items in place of actual data
     const test_items = [
-        { category: "Notes", content: "Example paragraph. This is where you will see a description of your interview.", score: 1 },
+        { category: "Notes", content: "Analysis Unimplemented. Text transcription disabled to save API costs in uploadAudio/route.ts", score: 1 },
         { category: "Eye Contact", content: "", score: 1 },
         { category: "Confidence", content: "", score: 2 },
         { category: "Quality of Answers", content: "", score: 3 },

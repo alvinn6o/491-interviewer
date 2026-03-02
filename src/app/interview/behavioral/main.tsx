@@ -96,7 +96,7 @@ export enum BIPageState {
 
 //returns a function that will resolve with a blob once the blob ref is no longer null
 //This allows future components to call this function expecting to get a unique promise
-function waitForData(dataRef: React.RefObject<Blob|null>): () => Promise<Blob> {
+function waitForData(dataRef: React.RefObject<Blob|null>, message: string): () => Promise<Blob> {
 
     return () => {
         return new Promise((resolve) => {
@@ -112,6 +112,9 @@ function waitForData(dataRef: React.RefObject<Blob|null>): () => Promise<Blob> {
                 if (dataRef.current) {
                     clearInterval(interval);
                     resolve(dataRef.current);
+                }
+                else {
+                    console.log(message);
                 }
             }, intervalDelay);
         });
@@ -140,8 +143,8 @@ function ViewSwitcher() {
     //the data is ready from BIActive before attempting to upload
     //returns a unique promise that holds until the data is null
     //then resolves to the data
-    const waitForAudio = waitForData(audioRef);
-    const waitForVideo = waitForData(storeVideoRef);
+    const waitForAudio = waitForData(audioRef, "Waiting for audio...");
+    const waitForVideo = waitForData(storeVideoRef, "Waiting for video...");
 
 
     switch (pageState) {
@@ -149,7 +152,7 @@ function ViewSwitcher() {
             return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} />);
 
         case BIPageState.END:
             console.log("Loading END with id: " + sessionId);

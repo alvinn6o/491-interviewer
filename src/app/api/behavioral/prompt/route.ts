@@ -6,6 +6,8 @@ import { db } from "~/server/db";
 
 export async function GET() {
 
+    console.log("GET prompt called");
+
     return NextResponse.json(
         {
             success: true,

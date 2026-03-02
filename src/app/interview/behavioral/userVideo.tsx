@@ -73,7 +73,7 @@ async function SetupVideoAsync(
     let stream: MediaStream;
 
     try {
-        stream = await StartStream(false, true);
+        stream = await StartStream(true, true); //record audio and video together
 
         if (activeVideoRef.current) {
             activeVideoRef.current.srcObject = stream;

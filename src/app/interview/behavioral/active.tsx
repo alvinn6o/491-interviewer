@@ -16,9 +16,10 @@ import { AudioMeterAndCameraBox } from "./userInput"
 import { BIPageState, OnFailedEndInterview } from "./main";
 
 
-export function BIActive({ changeState, prompt, audioRef }: {
+export function BIActive({ changeState, prompt, audioRef, storeVideoRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     audioRef: React.RefObject<Blob | null>;
+    storeVideoRef: React.RefObject<Blob | null>;
     prompt: string;
 }) {
     useEffect(() => {
@@ -54,7 +55,7 @@ export function BIActive({ changeState, prompt, audioRef }: {
 
     return (
         <div className={`${styles.centered_column} w-3/4`}>
-            <AudioMeterAndCameraBox recordAudio={true} audioRef={audioRef} />
+            <AudioMeterAndCameraBox recordAudio={true} audioRef={audioRef} recordVideo={true} storeVideoRef={storeVideoRef} />
             <button className="orange_button" onClick={EndInterviewButton}>End Interview</button>
             <DisplayBox title="Interview Prompt">
                 <p>

@@ -14,8 +14,9 @@ import type { ReactNode } from "react";
 import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
-import { SendAudioToServer , EndSession} from "./behavioralService";
+import { SendAudioVideoToServer , EndSession} from "./behavioralService";
 
+//TODO: have to refactor to combine audio and video data into one call
 export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     waitForAudio: () => Promise<Blob>;
@@ -31,6 +32,8 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
     const [data, setFeedbackData] = useState(test_items);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
+    const [video, setVideo] = useState<Blob | null>(null);
+    const [audio, setAudio] = useState<Blob | null>(null);
 
     useEffect(() => { //Call once on page state load
 
@@ -46,16 +49,19 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
                 console.log("Waiting for audioData to resolve.")
 
                 const audioData = await waitForAudio(); //await for the audio data to be sent by BIActive
+                const videoData = await waitForVideo(); //await for the audio data to be sent by BIActive
 
                 console.log("Waiting for audioData to be analyzed with session ID: " + sessionId)
 
-                const result = await SendAudioToServer(audioData);      //await for the audio data to be uploaded
+                const result = await SendAudioVideoToServer(audioData, videoData);      //await for the audio data to be uploaded
                 const updatedSession = await EndSession(sessionId);   //update session with completed state
 
                 console.log("Completed audio upload and session end.")
 
                 //store data in useState
                 setFeedbackData(result);
+                setVideo(videoData);
+                setAudio(audioData);
                 setLoading(false);
             } catch (err) {
                 setLoading(false);
@@ -145,8 +151,8 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
 
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <RecordedVideoBox />
-            <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
+            <RecordedVideoBox video={video} audio={audio} />
+            
 
             {loading && (
                 <div>
@@ -155,7 +161,10 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
             )}
 
             {!loading && !error && (
-                <DataDisplay data={data} />
+                <div className={`${styles.centered_column} w-full`}>
+                    <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
+                     <DataDisplay data={data} />
+                </div>
             )}
 
             {error  && (
@@ -170,11 +179,29 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
 
 }
 
-function RecordedVideoBox() {
+function RecordedVideoBox({ video, audio }: { video: Blob | null , audio: Blob | null}) {
+
+    let hasVideo = false;
+    let videoURL: string = "";
+
+    if (video) {
+        videoURL = URL.createObjectURL(video);
+        hasVideo = true;
+    }
+
+
     return (
         <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
-            <VideoPlayer />
-        </div>
+            {hasVideo && (
+                <VideoPlayer src={videoURL} />
+            )}
+            {!hasVideo && (
+                <div>
+                    Loading Video...
+                </div>
+            )}
+            
+        </div>  
     );
 }
 
