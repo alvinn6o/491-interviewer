@@ -15,7 +15,7 @@
 import { FilterByType, GroupByRoundedDate, GraphType, CreateGraphItem } from "./generalProcess";
 import type { GraphPoint, GraphItem  } from "./generalProcess";
 
-export function GraphItemsFromBehavioralScore(sessions: any) {
+export function GraphItemsFromBehavioralScore(sessions: any[]) {
 
     const gpByCategory: Record<string, GraphPoint[]> = GraphPointsFromBehavioralScore(sessions);
     const graphItems: GraphItem[] = []
@@ -29,7 +29,8 @@ export function GraphItemsFromBehavioralScore(sessions: any) {
     return graphItems;
 }
 
-function GraphPointsFromBehavioralScore(sessions: any) {
+//convert Record of Records into GraphPoint[]
+function GraphPointsFromBehavioralScore(sessions: any[]) {
     const overallAveragesByCategoryAndDate : Record<string, Record<number, number>> = GraphByBehavioralScore(sessions);
     const graphPointsByCategory: Record<string, GraphPoint[]> = {};
 
@@ -63,7 +64,7 @@ function OverallAveragesToGraphPoints(byDate: Record<number, number>) {
 }
 
 
-function GraphByBehavioralScore(sessions: any) {
+function GraphByBehavioralScore(sessions: any[]) {
     //Filter to beahvioral sessions
     //group by feedback category
     //group those further by date
@@ -157,7 +158,7 @@ function GetFeedbackScore(session: any, category: string) {
     return 0;
 }
 
-function GroupByFeedbackCategoryThenDate(sessions: any) {
+function GroupByFeedbackCategoryThenDate(sessions: any[]) {
     //group by feedback
     //for each feedback category
     //group sessions in that category by rounded date
@@ -178,7 +179,7 @@ function GroupByFeedbackCategoryThenDate(sessions: any) {
 
 
 //Dynamic, will group by any feedback name as long as the value stored is a number
-function GroupByFeedbackCategory(sessions: any) {
+function GroupByFeedbackCategory(sessions: any[]) {
     //for each session
     //for each fb category in that session
     //add session to list_category (create if doesnt exist)

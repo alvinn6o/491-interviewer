@@ -1,11 +1,49 @@
 ﻿//Author: Brandon Christian
 //Date: 3/2/2026
 
-type GraphItem = {
-    title : string
+"use client";
+
+export type GraphItem = {
+    type: string,
+    name: string,
+    points: GraphPoint[]
 }
 
-export function GraphList(loading: boolean, graphs: GraphItem[]) {
+export type GraphPoint = {
+    date: number,
+    value: number
+}
+
+import { useState, useEffect } from "react";
+import { GetGraphDataAsync } from "./visualizeService";
+
+
+export function Display() {
+
+    const [loading, setLoading] = useState(true);
+    const test_items: GraphItem[] = [];
+    const [graphData, setGraphData] = useState(test_items);
+
+    useEffect(
+        () => {
+
+            (async () => {
+                GetGraphDataAsync(
+                    setLoading,
+                    setGraphData
+                );
+            })();
+
+        },
+        [] );
+
+    return (
+        <GraphList loading={loading} graphs={graphData} />
+    );
+}
+
+
+function GraphList({ loading, graphs }: { loading: boolean, graphs: GraphItem[] }) {
 
     //single message if empty or loading
     if (graphs.length == 0) {
@@ -44,7 +82,23 @@ export function GraphList(loading: boolean, graphs: GraphItem[]) {
 function GraphItemDisplay({ graph }: { graph: GraphItem }) {
     return (
         <div>
-            TODO: GraphItemDisplay()
+            Type: {graph.type}
+            Name: {graph.name}
+            {graph.points?.map(
+                (point, i) => (
+                    <div key={`${i}`}>
+                        <GraphPointDisplay point={point} />
+                    </div>
+                )
+            )}
+        </div>
+    )
+}
+
+function GraphPointDisplay({ point }: { point: GraphPoint }) {
+    return (
+        <div>
+            * Date: {point.date}, Value: {point.value}
         </div>
     )
 }

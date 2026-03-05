@@ -4,7 +4,8 @@
 //General functions used for mulitple types of processing
 //as well as types used to help organize the data as its processed
 
-
+//Separate graphs by GraphType
+//A single type may have multiple lines with different names
 export enum GraphType {
     COUNT_BEHAVIORAL,
     COUNT_TECHNICAL,
@@ -12,12 +13,14 @@ export enum GraphType {
     SCORE_TECHNICAL
 }
 
+//A graph by type, name, and the list of date/value points
 export type GraphItem = {
     type: GraphType,
     name: string,
     points: GraphPoint[]
 }
 
+//A point to be displayed on the graph
 export type GraphPoint = {
     date: number,
     value: number
@@ -29,7 +32,7 @@ export function CreateGraphItem(graphPoints: GraphPoint[], name: string, type: G
 }
 
 //retrieve sessions by interview type
-export function FilterByType(sessions: any, type: string) {
+export function FilterByType(sessions: any[], type: string) {
     const filtered: any[] = [];
 
     sessions.forEach(
@@ -44,12 +47,19 @@ export function FilterByType(sessions: any, type: string) {
 }
 
 //TODO:
-function RoundDateToDay(date: number) {
-    return 0;
+function RoundDateToDay(date: any) {
+    const dateAsNumber = new Date(date).getTime();
+
+    //trim hours and smaller from the date
+    //so it rounds to the day
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const dayStart = Math.floor(dateAsNumber / DAY_MS) * DAY_MS;
+
+    return dayStart;
 }
 
 //group sessions by date, rounded to day
-export function GroupByRoundedDate(sessions: any) {
+export function GroupByRoundedDate(sessions: any[]) {
     const groupedByRoundedDate: Record<number, any[]> = {};
 
     sessions.forEach(

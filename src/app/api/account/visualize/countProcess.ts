@@ -12,7 +12,7 @@
 import { FilterByType, GroupByRoundedDate, CreateGraphItem, GraphType} from "./generalProcess";
 import type { GraphPoint, GraphItem} from "./generalProcess";
 
-export function GraphItemsFromSessionCount(sessions: any) {
+export function GraphItemsFromSessionCount(sessions: any[]) {
     const graphItems: GraphItem[] = []
 
     //Get list of GraphPoints containing count of a type of session on each day
@@ -27,7 +27,7 @@ export function GraphItemsFromSessionCount(sessions: any) {
 
 
 //filter, group, and count the sessions
-function GraphByCount(sessions: any, type: string) {
+function GraphByCount(sessions: any[], type: string) {
     const filtered = FilterByType(sessions, type);
     const grouped = GroupByRoundedDate(filtered);
     const points = GraphPointsByCount(grouped);

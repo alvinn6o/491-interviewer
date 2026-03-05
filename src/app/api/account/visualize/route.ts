@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
-
+import { GetCurrentUserSessions } from "../../interview/session/currentuser/route"
 import { ProcessSessionsToGraphData } from "./sessionProcess"
 
 export async function GET() {
-    const sessionsResponse = await fetch(`/api/interview/session/currentuser`, {
-        method: "GET"
-    });
+    console.log("Visualize GET called");
 
-    const processedData = ProcessSessionsToGraphData(sessionsResponse.json());
+    const response = await GetCurrentUserSessions();
+    const sessions : any[] = await response.json();
+
+    console.log("GOT user sessions");
+
+    const processedData = ProcessSessionsToGraphData(sessions);
+
+    console.log("PROCESSED user sessions");
 
     return NextResponse.json(processedData);
 }

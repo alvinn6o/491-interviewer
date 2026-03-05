@@ -15,7 +15,10 @@ import { auth } from "src/server/auth"
 export async function GET(
     request: Request
 ) {
+    return GetCurrentUserSessions();
+}
 
+export async function GetCurrentUserSessions() {
     const session = await auth();
 
     if (session && session.user) {
@@ -32,6 +35,6 @@ export async function GET(
 
         return NextResponse.json(sessions);
     }
-   
+
     return NextResponse.json([]);
 }
