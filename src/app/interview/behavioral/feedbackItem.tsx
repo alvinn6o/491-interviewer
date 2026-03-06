@@ -39,7 +39,7 @@ export function AnalysisResultToFBItems(analysisJSON: string)
     return fbItems;
 }
 
-function CreateFeedbackItem(acategory: string, acontent: string, ascore: number)
+export function CreateFeedbackItem(acategory: string, acontent: string, ascore: number)
 {
     let category = acategory as FeedbackCategory;
 

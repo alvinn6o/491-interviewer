@@ -2,6 +2,10 @@
 // 12/12/2025
 // Alexander Tu
 
+// Brandon Christian
+// Date: 2/19/2026
+// Added BehavioralPrompt
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -180,6 +184,11 @@ model InterviewReport {
 
   @@index([userId])
   @@index([sessionId])
+}
+
+model BehavioralPrompt {
+  id            String      @id @default(cuid())
+  prompt		String
 }
 
 // ============================================
