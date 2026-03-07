@@ -17,6 +17,7 @@ import {
   KeywordCategory,
   type KeywordMatchResult,
 } from "./keyword-matcher";
+import { computeFormattingScore, type FormattingResult } from "./resume-formatter";
 
 // ============================================
 // Types
@@ -33,6 +34,8 @@ export interface ATSScoreResult {
   keywordResult: KeywordMatchResult;
   /** Human-readable explanations per dimension */
   details: ATSDetail[];
+  /** Rule-based resume formatting checks */
+  formattingResult: FormattingResult;
 }
 
 export interface ATSBreakdown {
@@ -468,11 +471,14 @@ export function computeATSScore(
         : "No specific tools or certifications listed in job description (weight: 10%)",
   });
 
+  const formattingResult = computeFormattingScore(resumeText);
+
   return {
     score,
     grade: toGrade(score),
     breakdown,
     keywordResult,
     details,
+    formattingResult,
   };
 }
