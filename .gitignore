@@ -57,3 +57,6 @@ yarn-error.log*
 Properties
 bin
 obj
+
+#video uploads
+tmp_uploads/

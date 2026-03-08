@@ -52,19 +52,19 @@ model Session {
 }
 
 model User {
-  id                String             @id @default(cuid())
+  id                String              @id @default(cuid())
   name              String?
-  email             String?            @unique
+  email             String?             @unique
   emailVerified     DateTime?
   image             String?
   password          String?
   accounts          Account[]
-  interviewSessions InterviewSession[]
-  resumeAnalyses    ResumeAnalysis[]
   sessions          Session[]
   profile           UserProfile?
-  settings          UserSettings?
-  videoUploads      VideoUpload[]
+  resumeAnalyses    ResumeAnalysis[]
+  interviewSessions InterviewSession[]
+  settings      UserSettings?
+  videoUploads VideoUpload[]
 }
 
 model VerificationToken {
@@ -80,23 +80,24 @@ model VerificationToken {
 // ============================================
 
 model UserProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  firstName    String?
-  lastName     String?
-  phoneNumber  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  emailAddress String?
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String?
+  lastName        String?
+  phoneNumber     String?
+  emailAddress    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model UserSettings {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  prefersDarkMode Boolean @default(false)
-  languagePref    String? @default("JavaScript")
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  prefersDarkMode       Boolean     @default(false)
+  languagePref          String?     @default("JavaScript")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -108,13 +109,13 @@ model UserSettings {
 model ResumeAnalysis {
   id             String   @id @default(cuid())
   userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resumeName     String
   jobDescription String?
   atsScore       Int?
   matchScore     Float?
   feedback       Json
   analyzedAt     DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -124,16 +125,16 @@ model ResumeAnalysis {
 // ============================================
 
 model InterviewSession {
-  id           String              @id @default(cuid())
-  userId       String
-  type         InterviewType
-  status       SessionStatus       @default(IN_PROGRESS)
-  startedAt    DateTime            @default(now())
-  completedAt  DateTime?
-  overallScore Float?
-  feedback     Json?
-  responses    InterviewResponse[]
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          InterviewType
+  status        SessionStatus       @default(IN_PROGRESS)
+  startedAt     DateTime            @default(now())
+  completedAt   DateTime?
+  overallScore  Float?
+  feedback      Json?
+  responses     InterviewResponse[]
 
   @@index([userId])
 }
@@ -141,69 +142,89 @@ model InterviewSession {
 model InterviewResponse {
   id         String           @id @default(cuid())
   sessionId  String
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question   String
   answer     String
   score      Float?
   feedback   String?
   answeredAt DateTime         @default(now())
-  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
 }
 
 model TechnicalQuestion {
-  id           String     @id
+  id           String   @id
+  slug         String   @unique // ex: problem name in url "3sum"
+  title        String           // ex: 9. 3Sum
+  description  String   @db.Text
   difficulty   String
   category     String
-  createdAt    DateTime   @default(now())
-  description  String
-  functionName String
-  outputType   String
-  params       Json
-  slug         String     @unique
   starterCode  Json
-  title        String
+  functionName String           //ex: string("twoSum")
+  params       Json
+  outputType   String
+  createdAt    DateTime @default(now())
+
   testCases    TestCase[]
 }
 
 model TestCase {
-  id             String            @id @default(cuid())
-  input          Json
+  id             String   @id @default(cuid())
+  input          Json     //Input params.. ex: {"nums": [2, 7, 11, 15]}
   expectedOutput String
-  isHidden       Boolean           @default(false)
+  isHidden       Boolean  @default(false)
+
+  //Foreign Key
   problemId      String
   problem        TechnicalQuestion @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }
 
 model InterviewReport {
-  id         String   @id @default(cuid())
-  userId     String
-  sessionId  String
-  summary    String
-  isFavorite Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id            String      @id @default(cuid())
+  userId        String
+  sessionId     String
+  summary       String
+  isFavorite    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
 
   @@index([userId])
   @@index([sessionId])
 }
 
 model BehavioralPrompt {
-  id     String @id @default(cuid())
-  prompt String
+  id            String      @id @default(cuid())
+  prompt		String
 }
 
 model VideoUpload {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   originalName String
   mimeType     String
   sizeBytes    Int
-  storageKey   String @unique
 
-  createdAt DateTime @default(now())
-  analysis  Json?
+  // Where the file is stored (local path for now)
+  storageKey   String   @unique
+
+  createdAt    DateTime @default(now())
+
+  analysis     Json?
+}
+
+model VideoUpload {
+  id           String   @id <@&832399024442966026>efault(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String   @unique
+
+  createdAt    DateTime <@&832399024442966026>efault(now())
+  analysis     Json?
 }
 
 // ============================================

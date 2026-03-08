@@ -34,10 +34,11 @@ export const APP_KNOWLEDGE = {
     sessionHistory: {
       title: "View session history",
       steps: [
-        "Open Session History from the Account sidebar.",
+        "Open Session History from the Account sidebar or Navigation Bar at the top.",
         "You will see past interview sessions with dates and scores (if available).",
       ],
     },
+    // TODO: add more help topics as features are implemented, e.g. resume analysis, interview practice, etc.
   },
 
   rules: [
