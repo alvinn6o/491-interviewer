@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
+import { useInterviewSession } from "./useInterviewSession";
 
 /* Page States */
 enum TIPageState {
@@ -49,31 +50,32 @@ export default function TechnicalInterviewViewSwitcher() {
     questions.map(() => false) // false = incomplete
   );
 
-/* 60-minute timer */
-  const [timeLeft, setTimeLeft] = useState(60 * 60);
-
-/* Timer */
-  useEffect(() => {
-  const interval = setInterval(() => {
-    setTimeLeft((t) => {
-      if (t <= 1) {
-        clearInterval(interval);
-        setPageState(TIPageState.END);
-        return 0;
-      }
-      return t - 1;
-    });
-  }, 1000);
-
-  return () => clearInterval(interval);
-}, []);
+  function handleTimeExpired() {
+    setPageState(TIPageState.END);
+  }
+  const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
+    useInterviewSession(handleTimeExpired);
 
   /* Helpers */
   function startInterview(index: number) {
     setCurrentQuestionIndex(index);
     setPageState(TIPageState.ACTIVE);
+
+    if (session.status === "idle") {
+      startSession();
+    } else if (session.status === "paused") {
+      resumeSession();
+    }
   }
 
+  function finishEarly() {
+    endSession();
+    setPageState(TIPageState.END);
+  }
+
+  function backToQuestions() {
+    setPageState(TIPageState.START);
+  }
     // Judge0 language IDs
     const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
       python: 71,  // Python 3
@@ -101,31 +103,48 @@ export default function TechnicalInterviewViewSwitcher() {
       setPassed(null);
     }
 
-  function formatTime(seconds: number) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
+  function SessionBadge() {
+    let badgeColor = "bg-gray-200 text-gray-600";
+    let badgeText = "Not Started";
+
+    if (session.status === "active") {
+      badgeColor = "bg-green-100 text-green-700";
+      badgeText = "Session Active";
+    } else if (session.status === "paused") {
+      badgeColor = "bg-yellow-100 text-yellow-700";
+      badgeText = "Paused — return to resume";
+    } else if (session.status === "ended") {
+      badgeColor = "bg-red-100 text-red-600";
+      badgeText = "Session Ended";
+    }
+
+    return (
+      <span className={"text-xs px-2 py-1 rounded-full font-medium " + badgeColor}>
+        {badgeText}
+      </span>
+    );
   }
 
 /* Views */
-  switch (pageState) {
+switch (pageState) {
     case TIPageState.START:
       return (
         <main className="min-h-screen px-6 py-10">
-          
           <div className="flex justify-between max-w-4xl mx-auto items-center">
             <div>
-                <h1 className="text-3xl font-bold">
-                    Technical Interview
-                </h1>
-                <p className="text-gray-500 mt-1">
-                    Time limit of 60 minutes to complete both questions
-                </p>
+              <h1 className="text-3xl font-bold">Technical Interview</h1>
+              <p className="text-gray-500 mt-1">
+                Time limit of 60 minutes to complete both questions
+              </p>
             </div>
-            <span className="font-semibold">
-            Time Remaining: {formatTime(timeLeft)}
-            </span>
-        </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="font-semibold">
+                Time Remaining: {formatTime(timeLeft)}
+              </span>
+              <SessionBadge />
+            </div>
+          </div>
+
           <div className="max-w-2xl mx-auto mt-10 border rounded-lg">
             <div className="bg-orange-500 text-white px-4 py-2 font-semibold">
               Technical Skill Testing
@@ -137,23 +156,19 @@ export default function TechnicalInterviewViewSwitcher() {
                 className="flex items-center justify-between px-4 py-4 border-t"
               >
                 <span>
-                Question #{index + 1}{" "}
-                {questionStatus[index] ? (
-                    <span className="text-green-600 ml-2">
-                    (Complete)
-                    </span>
-                ) : (
-                    <span className="text-gray-400 ml-2">
-                    (Incomplete)
-                    </span>
-                )}
+                  Question #{index + 1}{" "}
+                  {questionStatus[index] === true ? (
+                    <span className="text-green-600 ml-2">(Complete)</span>
+                  ) : (
+                    <span className="text-gray-400 ml-2">(Incomplete)</span>
+                  )}
                 </span>
 
                 <button
-                onClick={() => startInterview(index)}
-                className="bg-orange-500 text-white px-4 py-1 rounded"
+                  onClick={() => startInterview(index)}
+                  className="bg-orange-500 text-white px-4 py-1 rounded"
                 >
-                Start
+                  {session.status === "idle" ? "Start" : "Continue"}
                 </button>
               </div>
             ))}
@@ -165,32 +180,42 @@ export default function TechnicalInterviewViewSwitcher() {
       return (
         <main className="min-h-screen px-6 py-10">
 
-          {/* Header with Back button + Timer */}
-        <div className="flex justify-between max-w-4xl mx-auto items-center">
+          {/* Header with back button and timer */}
+          <div className="flex justify-between max-w-4xl mx-auto items-center">
             <button
-            onClick={() => setPageState(TIPageState.START)}
-            className="text-sm text-blue-600 underline"
+              onClick={backToQuestions}
+              className="text-sm text-blue-600 underline"
             >
-            ← Back to questions
+              ← Back to questions
             </button>
-
-            <span className="font-semibold">
-              Time Remaining: {formatTime(timeLeft)}
-            </span>
+            <div className="flex flex-col items-end gap-1">
+              <span className="font-semibold">
+                Time Remaining: {formatTime(timeLeft)}
+              </span>
+              <SessionBadge />
+            </div>
           </div>
-        <div className="max-w-4xl mx-auto mt-2">
+
+          <div className="max-w-4xl mx-auto mt-2">
             <button
-            onClick={() => setPageState(TIPageState.END)}
-            disabled={!questionStatus.some(Boolean)}
-            className={`text-sm underline ${
+              onClick={finishEarly}
+              disabled={!questionStatus.some(Boolean)}
+              className={
                 questionStatus.some(Boolean)
-                ? "text-red-600"
-                : "text-gray-400 cursor-not-allowed"
-            }`}
+                  ? "text-sm underline text-red-600"
+                  : "text-sm underline text-gray-400 cursor-not-allowed"
+              }
             >
-            Finish Test Early
+              Finish Test Early
             </button>
-        </div>
+          </div>
+
+          {/*show banner when paused*/}
+          {session.status === "paused" && (
+            <div className="max-w-4xl mx-auto mt-4 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded text-sm text-center">
+              Timer paused — your session will resume when you return to this tab.
+            </div>
+          )}
 
           {/* Question */}
           <div className="max-w-4xl mx-auto border rounded p-4 mt-6">
