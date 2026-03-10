@@ -80,8 +80,8 @@ function AverageByDay(sessions: any[]) {
 
     sessions.forEach(
         (session) => {
-            if (session.score) {
-                total += session.score;
+            if (session.overallScore) {
+                total += session.overallScore;
                 i += 1;
             }
                 

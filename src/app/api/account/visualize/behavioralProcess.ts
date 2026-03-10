@@ -144,15 +144,10 @@ function OverallAverageByDay(averagesByDay: Record<number, number>) {
 function GetFeedbackScore(session: any, category: string) {
     const feedback = session.feedback;
 
-    if (feedback) {
-        Object.entries(feedback).forEach(
-            ([key, value]) => {
-                //value should already be number if the session was in this category
-                if (key == category) {
-                    return value;
-                }
-            }
-        );
+    //Don't use for each to search because the return from
+    //it doesnt return fully
+    if (feedback && category in feedback) {
+        return Number(feedback[category]);
     }
 
     return 0;
