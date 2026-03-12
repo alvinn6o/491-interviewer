@@ -19,7 +19,7 @@ export function GraphItemsFromTechnicalScore(sessions: any[]) {
     const gps: GraphPoint[] = GraphPointsFromTechnicalScore(sessions);
     const graphItems: GraphItem[] = []
 
-    graphItems.push(CreateGraphItem(gps, "Technical Score", GraphType.SCORE_TECHNICAL));
+    graphItems.push(CreateGraphItem(gps, "Technical Score", GraphType.TECHNICAL));
 
     return graphItems;
 }

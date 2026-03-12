@@ -22,7 +22,7 @@ export function GraphItemsFromBehavioralScore(sessions: any[]) {
 
     Object.entries(gpByCategory).forEach(
         ([category, graphPoints]) => {
-            graphItems.push(CreateGraphItem(graphPoints, category, GraphType.SCORE_BEHAVIORAL));
+            graphItems.push(CreateGraphItem(graphPoints, category, GraphType.BEHAVIORAL));
         }
     );
 

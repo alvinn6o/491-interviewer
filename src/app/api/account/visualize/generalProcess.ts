@@ -7,10 +7,8 @@
 //Separate graphs by GraphType
 //A single type may have multiple lines with different names
 export enum GraphType {
-    COUNT_BEHAVIORAL,
-    COUNT_TECHNICAL,
-    SCORE_BEHAVIORAL,
-    SCORE_TECHNICAL
+    BEHAVIORAL,
+    TECHNICAL
 }
 
 //A graph by type, name, and the list of date/value points
@@ -32,10 +30,13 @@ export function CreateGraphItem(graphPoints: GraphPoint[], name: string, type: G
 }
 
 //retrieve sessions by interview type
+//only retrieve completed sessions
 export function FilterByType(sessions: any[], type: string) {
     const filtered: any[] = [];
 
-    sessions.forEach(
+    const completed: any[] = FilterByCompleted(sessions);
+
+    completed.forEach(
         (session: any) => {
             if (session.type == type) {
                 filtered.push(session);
@@ -46,7 +47,21 @@ export function FilterByType(sessions: any[], type: string) {
     return filtered;
 }
 
-//TODO:
+
+function FilterByCompleted(sessions: any[]) {
+    const filtered: any[] = [];
+
+    sessions.forEach(
+        (session: any) => {
+            if (session.status == "COMPLETED") {
+                filtered.push(session);
+            }
+        }
+    );
+
+    return filtered;
+}
+
 function RoundDateToDay(date: any) {
     const dateAsNumber = new Date(date).getTime();
 

@@ -88,13 +88,23 @@ function GraphList({ loading, graphs }: { loading: boolean, graphs: GraphItem[] 
 
     }
 
+    const [startDate, setStartDate] = useState('');
+
+
+    const [endDate, setEndDate] = useState('');
+
+    const [filterType, setFilterType] = useState("all")
+
+
     //map each graph item to the graph display
     return (
         <div>
+            <FilterDisplay filterType={filterType} setFilterType={setFilterType}/>
+            <DateDisplay startDate={startDate} endDate={endDate} setStartDate={setStartDate} setEndDate={setEndDate} />
             {graphs?.map(
                 (graph, i) => (
                     <div key={`${i}`}>
-                        <GraphItemDisplay graph={graph} />
+                        <GraphItemDisplay graph={graph} startDate={startDate} endDate={endDate} filterType={filterType} />
                     </div>
                 )
             )}
@@ -102,19 +112,129 @@ function GraphList({ loading, graphs }: { loading: boolean, graphs: GraphItem[] 
     );
 }
 
-function GraphItemDisplay({ graph }: { graph: GraphItem }) {
+function DateDisplay({ startDate, endDate, setStartDate, setEndDate }: {
+    startDate: string,
+    endDate: string,
+    setStartDate: React.Dispatch<React.SetStateAction<string>>;
+    setEndDate: React.Dispatch<React.SetStateAction<string>>;
+}) {
+
+
+    const handleStartDate = (event: any) => {
+        setStartDate(event.target.value);
+    };
+
+    const handleEndDate = (event: any) => {
+        setEndDate(event.target.value);
+    };
+
+
+    return (
+        <div>
+            Date Range:
+            <input
+                type="date"
+                id="start-input"
+                value={startDate}
+                onChange={handleStartDate}
+            />
+             To 
+            <input
+                type="date"
+                id="end-input"
+                value={endDate}
+                onChange={handleEndDate}
+            />
+            <hr/>
+        </div>
+    );
+}
+
+function FilterDisplay({ filterType, setFilterType }: {
+    filterType: string,
+    setFilterType: React.Dispatch<React.SetStateAction<string>>;
+}) {
+
+    return (
+        <div>
+            Filter: 
+            <select
+                id="filter-input"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+            >
+                <option value="all">All</option>
+                <option value="behavioral">Behavioral</option>
+                <option value="technical">Technical</option>
+            </select>
+            <hr />
+        </div>
+    );
+}
+
+function GraphItemDisplay({ graph, startDate, endDate, filterType }
+    : {
+        graph: GraphItem,
+        startDate: string,
+        endDate: string,
+        filterType: string,
+    }) {
 
     //Convert the GraphPoints into a form readable
     //by chart.js
+
+    if (graph.points.length == 0) {
+        return (
+            <br/>
+        )
+    }
+
+    //Convert into format used by graph points
+    const startDateStamp = StringToTimestamp(startDate);
+    const endDateStamp = StringToTimestamp(endDate);
+
+    console.log("start to end is " + startDateStamp + " to " + endDateStamp);
+    console.log("start to end date is " + startDate + " to " + endDate);
 
     const graphXYPoints: any[] = [];
 
     graph.points.forEach(
         (point: GraphPoint) => {
             const xyPoint = { x: point.date, y: point.value }
-            graphXYPoints.push(xyPoint);
+
+            //if both start and end are valid, also filter by date
+            if (startDateStamp != -1 && endDateStamp != -1) {
+
+                if (xyPoint.x >= startDateStamp && xyPoint.x <= endDateStamp) {
+                    graphXYPoints.push(xyPoint);
+                }
+            }
+            else {
+                graphXYPoints.push(xyPoint);
+            }
+
+            
         }
     )
+
+    //0 is behavioral 1 is technical
+    if (filterType != "all") {
+        if (filterType == "behavioral") {
+            if (graph.type != "0") {
+                return (
+                    <br />
+                );
+            }
+        }
+        else if (filterType == "technical") {
+            if (graph.type != "1") {
+                return (
+                    <br />
+                );
+            }
+        }
+    }
+
 
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const chartRef = useRef<Chart | null>(null);
@@ -126,6 +246,7 @@ function GraphItemDisplay({ graph }: { graph: GraphItem }) {
         // Destroy previous chart on re-render to avoid duplicates
         chartRef.current?.destroy();
 
+        //fill the chart with the data
         chartRef.current = new Chart(canvas, {
             type: "line",
             data: {
@@ -161,25 +282,21 @@ function GraphItemDisplay({ graph }: { graph: GraphItem }) {
 
     return (
         <div>
-            <div>Type: {graph.type}</div>
-            <div> Name: {graph.name}</div>
+            <div>{CapitalizeTitle(graph.name)}</div>
             <canvas ref={canvasRef} />
-            <div>
-                {graph.points?.map(
-                    (point, i) => (
-                        <div key={`${i}`}>
-                            <GraphPointDisplay point={point} />
-                        </div>
-                    )
-                )}
-            </div>
         </div>
     );
 
-    /*
-    return (
-        
-    )*/
+
+}
+
+function StringToTimestamp(date: string) {
+    //return -1 for not set dates
+    if (date == '')
+        return -1;
+
+    const timestamp = new Date(date).getTime();
+    return timestamp;
 }
 
 function GraphPointDisplay({ point }: { point: GraphPoint }) {
@@ -188,4 +305,21 @@ function GraphPointDisplay({ point }: { point: GraphPoint }) {
             * Date: {point.date}, Value: {point.value}
         </div>
     )
+}
+
+function CapitalizeTitle(text: string) {
+
+    //lowercase, split by spaces, capitlize first letter, then rejoin
+
+    text = text.toLowerCase();
+
+    const words = text.split(' ');
+
+    const capitalizedWords = words.map(word => {
+        if (word.length === 0) return ''; // Handle multiple spaces
+        // Get the first character and convert to uppercase, then add the rest of the word
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+
+    return capitalizedWords.join(' ');
 }

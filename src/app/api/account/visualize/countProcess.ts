@@ -19,8 +19,8 @@ export function GraphItemsFromSessionCount(sessions: any[]) {
     const gpCountBehavioral = GraphByCount(sessions, "BEHAVIORAL");
     const gpCountTechnical = GraphByCount(sessions, "TECHNICAL");
 
-    graphItems.push(CreateGraphItem(gpCountBehavioral, "Behavioral Count", GraphType.COUNT_BEHAVIORAL));
-    graphItems.push(CreateGraphItem(gpCountTechnical, "Technical Count", GraphType.COUNT_TECHNICAL));
+    graphItems.push(CreateGraphItem(gpCountBehavioral, "Behavioral Session Count", GraphType.BEHAVIORAL));
+    graphItems.push(CreateGraphItem(gpCountTechnical, "Technical Session Count", GraphType.TECHNICAL));
 
     return graphItems;
 }
