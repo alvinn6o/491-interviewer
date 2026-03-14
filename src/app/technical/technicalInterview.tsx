@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+// Dylan Hartley
+// 12/12/2025
+
+import { useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
 import { useInterviewSession } from "./useInterviewSession";
+import allQuestions from "../../../prisma/data/consolidated-questions.json";
 
 /* Page States */
 enum TIPageState {
@@ -13,53 +17,107 @@ enum TIPageState {
 
 /* Question Type */
 type Question = {
-  id: number;
-  prompt: string;
+  id: string;
+  title: string;
+  description: string;
+  difficulty: "Easy" | "Medium" | "Hard";
+  category: string;
+  starterCode: {
+    python?: string;
+    cpp?: string;
+    java?: string;
+    csharp?: string;
+  };
 };
 
-/* Dummy Fetch */
-function fetchTechnicalQuestions(): Question[] {
-  return [
-    { id: 1, prompt: "Write a function that adds two numbers." },
-    { id: 2, prompt: "Reverse a string." },
+
+//Randomly selects two questions from different difficulty tiers.
+//Valid pairings: Easy+Medium, Easy+Hard, Medium+Hard.
+function pickTwoQuestions(): Question[] {
+  const easy = allQuestions.filter((q) => q.difficulty === "Easy") as Question[];
+  const medium = allQuestions.filter((q) => q.difficulty === "Medium") as Question[];
+  const hard = allQuestions.filter((q) => q.difficulty === "Hard") as Question[];
+
+  // Randomly pick one item from an array
+  function pickRandom(arr: Question[]): Question {
+    const index = Math.floor(Math.random() * arr.length);
+    return arr[index]!;
+  }
+
+  // Randomly choose which difficulty pairing to use
+  const pairings = [
+    [easy, medium],
+    [easy, hard],
+    [medium, hard],
   ];
+
+  // Filter out any pairings where one of the tiers is empty
+  const validPairings = pairings.filter(
+    (pair) => pair[0]!.length > 0 && pair[1]!.length > 0
+  );
+
+  // Pick a random valid pairing
+  const chosenPairing = validPairings[Math.floor(Math.random() * validPairings.length)]!;
+
+  const question1 = pickRandom(chosenPairing[0]!);
+  const question2 = pickRandom(chosenPairing[1]!);
+
+  return [question1, question2];
 }
 
 /* View Switcher */
 export default function TechnicalInterviewViewSwitcher() {
-  const [pageState, setPageState] = useState<TIPageState>(
-    TIPageState.START
+
+  const [pageState, setPageState] = useState<TIPageState>(TIPageState.START);
+
+  // Pick two questions once when the component first mounts
+  const [questions] = useState<Question[]>(pickTwoQuestions());
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+
+  const [language, setLanguage] = useState<SupportedLanguage>("python");
+
+  // Load the starter code for the first question in the selected language
+  // Falls back to CodeEditor's generic starter code if the question doesn't have one
+  const [code, setCode] = useState(
+    questions[0]?.starterCode?.python ?? getStarterCode("python")
   );
 
-/* Shared interview data */
-  const [questions] = useState<Question[]>(fetchTechnicalQuestions());
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  
-  const [language, setLanguage] = useState<SupportedLanguage>("python");
-  const [code, setCode] = useState(getStarterCode("python"));
   const [output, setOutput] = useState("");
   const [passed, setPassed] = useState<boolean | null>(null);
 
-  // Reset code to starter when language changes
-  function handleLanguageChange(newLang: SupportedLanguage) {
-    setLanguage(newLang);
-    setCode(getStarterCode(newLang));
-  }
-
   const [questionStatus, setQuestionStatus] = useState<boolean[]>(
-    questions.map(() => false) // false = incomplete
+    questions.map(() => false)
   );
 
+  // Called by the hook when the 60 minute timer hits zero
   function handleTimeExpired() {
     setPageState(TIPageState.END);
   }
+
   const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
     useInterviewSession(handleTimeExpired);
 
-  /* Helpers */
+  // When the language changes, reload the starter code for the current question
+  function handleLanguageChange(newLang: SupportedLanguage) {
+    setLanguage(newLang);
+    const currentQuestion = questions[currentQuestionIndex];
+    if (currentQuestion) {
+      const starter = currentQuestion.starterCode[newLang];
+      setCode(starter ?? getStarterCode(newLang));
+    }
+  }
+
+  // Start a specific question, also kicks off the session on first entry
   function startInterview(index: number) {
     setCurrentQuestionIndex(index);
     setPageState(TIPageState.ACTIVE);
+
+    // Load the starter code for the selected question in the current language
+    const selectedQuestion = questions[index];
+    if (selectedQuestion) {
+      const starter = selectedQuestion.starterCode[language];
+      setCode(starter ?? getStarterCode(language));
+    }
 
     if (session.status === "idle") {
       startSession();
@@ -68,41 +126,52 @@ export default function TechnicalInterviewViewSwitcher() {
     }
   }
 
+  // Finish the interview early
   function finishEarly() {
     endSession();
     setPageState(TIPageState.END);
   }
 
+  // Go back to question list, timer keeps running
   function backToQuestions() {
     setPageState(TIPageState.START);
   }
-    // Judge0 language IDs
-    const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
-      python: 71,  // Python 3
-      cpp: 54,     // C++ (GCC 9.2.0)
+
+  // Judge0 language IDs
+  const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
+    python: 71,
+    cpp: 54,
+  };
+
+  function runCode() {
+    const payload = {
+      source_code: code,
+      language_id: JUDGE0_LANGUAGE_IDS[language],
     };
+    setOutput(JSON.stringify(payload, null, 2));
+    setPassed(null);
+  }
 
-    function runCode() {
-      // Package code for Judge0 submission
-      const payload = {
-        source_code: code,
-        language_id: JUDGE0_LANGUAGE_IDS[language],
-        // stdin: "", // Will be populated with test case input later
-      };
+  // Returns a colored difficulty badge for a question
+  function DifficultyBadge({ difficulty }: { difficulty: string }) {
+    let badgeColor = "bg-gray-100 text-gray-600";
 
-      // Display the payload for verification (will be sent to backend later)
-      setOutput(JSON.stringify(payload, null, 2));
-
-      // TODO: Replace with actual API call to backend
-      // const response = await fetch("/api/judge", {
-      //   method: "POST",
-      //   body: JSON.stringify({ ...payload, problemId: questions[currentQuestionIndex].id }),
-      // });
-
-      // Temporary pass logic for demo
-      setPassed(null);
+    if (difficulty === "Easy") {
+      badgeColor = "bg-green-100 text-green-700";
+    } else if (difficulty === "Medium") {
+      badgeColor = "bg-yellow-100 text-yellow-700";
+    } else if (difficulty === "Hard") {
+      badgeColor = "bg-red-100 text-red-600";
     }
 
+    return (
+      <span className={"text-xs px-2 py-1 rounded-full font-medium ml-2 " + badgeColor}>
+        {difficulty}
+      </span>
+    );
+  }
+
+  // Small badge that shows the current session status in the header
   function SessionBadge() {
     let badgeColor = "bg-gray-200 text-gray-600";
     let badgeText = "Not Started";
@@ -125,8 +194,8 @@ export default function TechnicalInterviewViewSwitcher() {
     );
   }
 
-/* Views */
-switch (pageState) {
+  /* Views */
+  switch (pageState) {
     case TIPageState.START:
       return (
         <main className="min-h-screen px-6 py-10">
@@ -155,8 +224,9 @@ switch (pageState) {
                 key={q.id}
                 className="flex items-center justify-between px-4 py-4 border-t"
               >
-                <span>
-                  Question #{index + 1}{" "}
+                <span className="flex items-center">
+                  Question #{index + 1}: {q.title}
+                  <DifficultyBadge difficulty={q.difficulty} />
                   {questionStatus[index] === true ? (
                     <span className="text-green-600 ml-2">(Complete)</span>
                   ) : (
@@ -166,7 +236,7 @@ switch (pageState) {
 
                 <button
                   onClick={() => startInterview(index)}
-                  className="bg-orange-500 text-white px-4 py-1 rounded"
+                  className="bg-orange-500 text-white px-4 py-1 rounded ml-4 shrink-0"
                 >
                   {session.status === "idle" ? "Start" : "Continue"}
                 </button>
@@ -210,21 +280,27 @@ switch (pageState) {
             </button>
           </div>
 
-          {/*show banner when paused*/}
+          {/* Show a banner when the session is paused */}
           {session.status === "paused" && (
             <div className="max-w-4xl mx-auto mt-4 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded text-sm text-center">
               Timer paused — your session will resume when you return to this tab.
             </div>
           )}
 
-          {/* Question */}
+          {/* Question title and difficulty */}
           <div className="max-w-4xl mx-auto border rounded p-4 mt-6">
-            <p className="text-sm text-gray-700">
-              {questions[currentQuestionIndex].prompt}
+            <div className="flex items-center mb-2">
+              <h2 className="font-semibold text-lg">
+                {questions[currentQuestionIndex]?.title}
+              </h2>
+              <DifficultyBadge difficulty={questions[currentQuestionIndex]?.difficulty ?? ""} />
+            </div>
+            <p className="text-sm text-gray-700 whitespace-pre-wrap">
+              {questions[currentQuestionIndex]?.description}
             </p>
           </div>
 
-          {/* Code + Output */}
+          {/* Code editor and output panel */}
           <div className="max-w-4xl mx-auto grid grid-cols-2 gap-6 mt-6">
             <div className="border rounded p-4">
               <h3 className="font-semibold mb-2">Code</h3>
@@ -251,15 +327,11 @@ switch (pageState) {
 
               <div className="mt-4 text-sm">
                 {passed === null && <p>Run code to see results</p>}
-                {passed && (
-                  <p className="text-green-600">
-                    Case Test Passed ✅
-                  </p>
+                {passed === true && (
+                  <p className="text-green-600">Case Test Passed ✅</p>
                 )}
                 {passed === false && (
-                  <p className="text-red-600">
-                    Case Test Failed ❌
-                  </p>
+                  <p className="text-red-600">Case Test Failed ❌</p>
                 )}
               </div>
             </div>
@@ -267,33 +339,24 @@ switch (pageState) {
         </main>
       );
 
-      {/* End View + Summary */}
     case TIPageState.END:
-        return (
-            <main className="min-h-screen flex items-center justify-center">
-
-            <div className="flex flex-col items-center">
-                <h1 className="text-3xl font-bold mb-6">
-                Interview Complete
-                </h1>
-                <ul className="text-sm space-y-2">
-                {questionStatus.map((done, idx) => (
-                    <li key={idx}>
-                    Question #{idx + 1}:{" "}
-                    {done ? (
-                        <span className="text-green-600 font-semibold">
-                        Complete
-                        </span>
-                    ) : (
-                        <span className="text-red-600 font-semibold">
-                        Incomplete
-                        </span>
-                    )}
-                    </li>
-                ))}
-                </ul>
-
-            </div>
+      return (
+        <main className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <h1 className="text-3xl font-bold mb-6">Interview Complete</h1>
+            <ul className="text-sm space-y-2">
+              {questionStatus.map((done, idx) => (
+                <li key={idx}>
+                  {questions[idx]?.title ?? "Question #" + (idx + 1)}:{" "}
+                  {done === true ? (
+                    <span className="text-green-600 font-semibold">Complete</span>
+                  ) : (
+                    <span className="text-red-600 font-semibold">Incomplete</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
         </main>
       );
   }
