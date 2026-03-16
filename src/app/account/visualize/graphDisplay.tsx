@@ -21,6 +21,8 @@ import {
     Chart,
     LineController,
     LineElement,
+    BarController,
+    BarElement,
     PointElement,
     LinearScale,
     TimeScale,
@@ -33,6 +35,8 @@ import "chartjs-adapter-date-fns";
 Chart.register(
     LineController,
     LineElement,
+    BarController,
+    BarElement,
     PointElement,
     LinearScale,
     TimeScale,
@@ -172,12 +176,12 @@ function FilterDisplay({ filterType, setFilterType }: {
     );
 }
 
-function GraphItemDisplay({ graph, startDate, endDate, filterType }
+function GraphItemDisplay({ graph, startDate, endDate, filterType}
     : {
         graph: GraphItem,
         startDate: string,
         endDate: string,
-        filterType: string,
+        filterType: string
     }) {
 
     //Convert the GraphPoints into a form readable
@@ -239,22 +243,27 @@ function GraphItemDisplay({ graph, startDate, endDate, filterType }
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const chartRef = useRef<Chart | null>(null);
 
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
+
+        //use bar graph for count graphs
+        const gtype = graph.name.includes("Count") ? "bar" : "line";
 
         // Destroy previous chart on re-render to avoid duplicates
         chartRef.current?.destroy();
 
         //fill the chart with the data
         chartRef.current = new Chart(canvas, {
-            type: "line",
+            type: gtype,
             data: {
                 datasets: [
                     {
                         label: "Values",
                         data: graphXYPoints,
-                        borderColor: "blue",
+                        borderColor: "orange",
+                        backgroundColor: "orange",
                         fill: false,
                     },
                 ],

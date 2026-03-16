@@ -76,8 +76,7 @@ export function BehavioralInterview() {
             <h1>Behavioral Interview Session</h1>
             <p className="description">
                 Simulate an authentic interview experience.
-                Your responses will be evaluated for clairty, tone, and professionalism in
-                real time.
+                Your responses will be evaluated for clairty, tone, and professionalism.
             </p>
             <ViewSwitcher />
             <br />
@@ -149,10 +148,10 @@ function ViewSwitcher() {
 
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} storeVideoRef={storeVideoRef} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} sessionId={sessionId} />);
 
         case BIPageState.END:
             console.log("Loading END with id: " + sessionId);

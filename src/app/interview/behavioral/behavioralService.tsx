@@ -114,6 +114,14 @@ export async function SaveSession(audioData: Blob, videoData: any) {
     return response.json();
 }
 
+export async function AbandonSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/abandon/${sessionId}`, {
+        method: "POST"
+    });
+
+    return response.json();
+}
+
 export async function CreateSession() {
     const response = await fetch("/api/behavioral/create", {
         method: "POST"
