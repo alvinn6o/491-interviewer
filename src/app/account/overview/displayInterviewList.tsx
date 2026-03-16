@@ -15,19 +15,28 @@
 import type { InterviewItem } from "./interviewItem";
 import { CreateTestInterviewItems } from "./interviewItem";
 import { GetCurrentUserInterviewData } from "./overviewService";
-import { useState, useEffect } from "react";
-import { InterviewItemBox } from "./displayInterviewItem"
+import { useState, useEffect, useRef} from "react";
+import { InterviewItemBox } from "./displayInterviewItem";
+import { DateDisplay, FilterDisplay, FilterItems } from "./listFilter";
 
+/*
 enum InterviewListState {
     ALL,
     FAVORITE
-}
+}*/
 
 export function DisplayInterviewList() {
     //helps type useState and provides placeholder
     const testItems = CreateTestInterviewItems();
 
+    const [loading, setLoading] = useState(true);
     const [items, setItems] = useState(testItems);
+    const [filteredItems, setFilteredItems] = useState(testItems);
+
+    const [filterType, setFilter] = useState("all");
+
+    const [startDate, setStart] = useState("");
+    const [endDate, setEnd] = useState("");
 
     
     //wrap in useEffect so that it only runs once on initial render
@@ -38,27 +47,39 @@ export function DisplayInterviewList() {
         //so we can call data fetch synchronously
         (async () => {
             const asyncItems = await GetCurrentUserInterviewData(); 
+
+            //keep list of all items before any filtering
             setItems(asyncItems);
+            setFilteredItems(asyncItems);
+            setLoading(false);
         })();
     }, []);
 
-    const [state, setState] = useState(InterviewListState.ALL);
+    useEffect(() => {
+        const filtered = FilterItems(startDate, endDate, filterType, items);
+        setFilteredItems(filtered);
+    }, [startDate, endDate, filterType])
+
+    //const [state, setState] = useState(InterviewListState.ALL);
 
     return (
         <main>
-            <button className="orange_button p-1 m-1 pl-2 pr-2" onClick={() => setState(InterviewListState.ALL) }>All</button>
-            <button className="orange_button p-1 m-1 pl-2 pr-2" onClick={() => setState(InterviewListState.FAVORITE)}>Favorites</button>
-            {state == InterviewListState.ALL ? (
-                <InterviewList items={items} />
-            )  : (
-                <FavoriteInterviewList items={items} />
-            )}
-           
+            <DateDisplay startDate={startDate} endDate={endDate} setStartDate={setStart} setEndDate={setEnd} />
+            <FilterDisplay filterType={filterType} setFilterType={setFilter} />
+            <InterviewList items={filteredItems} loading={loading} /> 
         </main>
     )
 }
 
-function InterviewList({ items }: { items: InterviewItem[] }) {
+function InterviewList({ items, loading }: { items: InterviewItem[], loading: boolean }) {
+
+    if (loading) {
+        return (
+            <div>
+                Loading sessions.
+            </div>
+        ) 
+    }
 
     if (items.length == 0) {
         return (
@@ -66,14 +87,6 @@ function InterviewList({ items }: { items: InterviewItem[] }) {
                 No past sessions.
             </div>
         )
-    }
-    //The first item in an array is at 1 apparently
-    else if (items[1]?.status == "LOADING") {
-        return (
-            <div>
-                Loading sessions.
-            </div>
-        ) 
     }
 
     return (
@@ -89,27 +102,3 @@ function InterviewList({ items }: { items: InterviewItem[] }) {
     );
 }
 
-function FavoriteInterviewList({ items }: { items: InterviewItem[] }) {
-
-    const [allItems, setAllItems] = useState(items);
-
-    useEffect(() => {
-
-        const favoriteItems: InterviewItem[] = [];
-
-        //wrap in async func
-        //so we can call data fetch synchronously
-        items.forEach((item) => {
-
-            if (item.isFavorite)
-                favoriteItems.push(item);
-        });
-
-        setAllItems(favoriteItems);
-
-    }, []);
-
-    return (
-        <InterviewList items={allItems} />
-    );
-}

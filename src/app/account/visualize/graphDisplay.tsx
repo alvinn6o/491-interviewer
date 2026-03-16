@@ -93,10 +93,7 @@ function GraphList({ loading, graphs }: { loading: boolean, graphs: GraphItem[] 
     }
 
     const [startDate, setStartDate] = useState('');
-
-
     const [endDate, setEndDate] = useState('');
-
     const [filterType, setFilterType] = useState("all")
 
 
