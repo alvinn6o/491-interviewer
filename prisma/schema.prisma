@@ -134,6 +134,11 @@ model InterviewSession {
   responses     InterviewResponse[]
   savedData		StoredBehavioralSession[]
 
+  question1Id   String?                // reference TechnicalQuestion.id
+  question2Id   String?                // reference TechnicalQuestion.id
+  resumedAt     DateTime?              // Session timer; when was last resumed
+  pausedAt      DateTime?              // null = running
+
   @@index([userId])
 }
 

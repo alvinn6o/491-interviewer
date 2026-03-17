@@ -1,11 +1,11 @@
-﻿//Author: Brandon Christian
+﻿//Author: Dylan Hartley
 //Date: 2/10/2026
-//Move to separate file
 
 export enum FeedbackCategory {
     NONE = "none",
     ATS_SCORE = "ats_score",
     SKILLS_MATCH = "skills_match",
+    BEHAVIORAL_SKILLS = "behavioral_skills",
     FORMATTING = "formatting",
     RECRUITER_TIPS = "recruiter_tips",
     KEYWORDS = "keywords",
