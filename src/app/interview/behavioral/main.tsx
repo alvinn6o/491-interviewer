@@ -37,7 +37,7 @@ export async function OnStartInterviewClicked(): Promise<any> {
     }
 
     //Create a new session on the server
-    const newSession = await CreateSession();
+    const newSession = await CreateSession(prompt);
 
     if (!newSession) {
         console.log("Failed to create new session!");
