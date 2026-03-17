@@ -132,7 +132,9 @@ model InterviewSession {
   overallScore  Float?
   feedback      Json?
   responses     InterviewResponse[]
+
   savedData		StoredBehavioralSession[]
+  prompt		String?
 
   question1Id   String?                // reference TechnicalQuestion.id
   question2Id   String?                // reference TechnicalQuestion.id

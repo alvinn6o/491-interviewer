@@ -122,9 +122,13 @@ export async function AbandonSession(sessionId: string) {
     return response.json();
 }
 
-export async function CreateSession() {
+export async function CreateSession(prompt: string) {
     const response = await fetch("/api/behavioral/create", {
-        method: "POST"
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt }),
     });
 
     return response.json();
