@@ -36,8 +36,10 @@ export async function OnStartInterviewClicked(): Promise<any> {
         throw new Error("Fetch Prompt Failed.")
     }
 
+    console.log("prompt got. creating new session")
+
     //Create a new session on the server
-    const newSession = await CreateSession(prompt);
+    const newSession = await CreateSession(prompt.prompt);
 
     if (!newSession) {
         console.log("Failed to create new session!");
