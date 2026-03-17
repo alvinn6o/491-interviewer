@@ -9,21 +9,24 @@
 
 import styles from "./test.module.css";
 import React from "react";
-import { CameraBox } from "./userInput";
+import { AudioMeterAndCameraBox } from "./userInput";
 import { BIPageState, OnStartInterviewClicked, OnFailedStartInterview } from "./main";
+import { useState } from "react";
 
 
 
-export function BIStart({ changeState, changePrompt, audioRef, setSessionId }: {
+export function BIStart({ changeState, changePrompt, audioRef, setSessionId, storeVideoRef }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
     audioRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
+    storeVideoRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
     setSessionId: React.Dispatch<React.SetStateAction<string>>;
 }) {
 
     const StartInterviewButton = async () => {
         try {
             //Try and Wait For Upload
+            setLoading(true);
             const result = await OnStartInterviewClicked();
 
             //Set response as prompt
@@ -38,14 +41,24 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId }: {
         } catch (error) {
 
             OnFailedStartInterview(error);
+            setLoading(false);
 
         }
     };
 
+    const [loading, setLoading] = useState(false);
+
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <CameraBox recordAudio={false} audioRef={audioRef} />
-            <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
+            <AudioMeterAndCameraBox recordAudio={false} audioRef={audioRef} recordVideo={false} storeVideoRef={storeVideoRef} />
+            {!loading && (
+                <button className="orange_button" onClick={StartInterviewButton}>Start Interview</button>
+            )}
+
+            {loading && (
+                <div>loading...</div>
+            ) }
+            
         </div>
     );
 }

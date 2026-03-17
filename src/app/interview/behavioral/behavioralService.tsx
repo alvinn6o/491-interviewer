@@ -12,45 +12,57 @@
 //Change api point "store" to "end"
 
 import type { FeedbackItem } from "./feedbackItem";
+import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 
-export async function SendAudioToServer(audioData: Blob) {
-    //Extract the file extension
-    //which differs between browsers
-    const mimeType = audioData.type;
-    const extension = mimeType.split("/")[1];
+//Wrapper function to simplify calls to behavioral service
+export async function SendAudioVideoToServer(audioData: Blob, videoData: Blob) {
+
+    const audioFeedback = await SendToServer(audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoFeedback = await SendToServer(videoData, "/api/behavioral/uploadVideo", "video");
+
+
+    const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
+
+    return allFeedback;
+}
+
+async function SendToServer(data: Blob, apiURL: string, formDataKey: string) {
+    //Attach data to form data
+    //in order to send it to the api
+    console.log("Send blob to " + apiURL);
 
     const formData = new FormData();
 
     formData.append(
-        "audio",
-        audioData,
-        `recording.${extension}`
+        formDataKey,
+        data
     );
 
-    //TODO: remove early end
-    //saves api call costs during testing.
-    return [CreateFeedbackItem("remove line 28 in behavioralService.tsx", "interrupt before api call to save costs during testing.", 1)];
-
-    console.log("about to send blob to back end");
-    console.log("blob size: " + audioData.size);
-
-    const response = await fetch("/api/behavioral/uploadAudio", {
+    //obtain json analysis of the feedback data
+    const response = await fetch(apiURL, {
         method: "POST",
         body: formData
     });
 
-    const data = await response.json();
+    console.log("got response from " + apiURL);
 
-    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(data));
+    //Convert json to FeedbackItem objects
+    const responseData = await response.json();
+    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(responseData));
 
-    //send to page.tsx
+    console.log("convert to fbItems from  " + apiURL);
+
+    //send to end.tsx
     return fbItems;
 }
+
 
 //Get prompt from database
 export async function GetPrompt() {
     try {
+        console.log("getting prompt");
+
         const response = await fetch("/api/behavioral/prompt", {
             method: "GET"
         });
@@ -63,7 +75,11 @@ export async function GetPrompt() {
 
         return json;
     } catch (err) {
-        throw err;
+        return ({
+            success: true,
+            prompt: "TODO: fill DB with prompts."
+        });
+        //throw err;
     }
     
 }
@@ -94,6 +110,14 @@ export async function SaveSession(audioData: Blob, videoData: any) {
         method: "POST",
         body: formData
     })
+
+    return response.json();
+}
+
+export async function AbandonSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/abandon/${sessionId}`, {
+        method: "POST"
+    });
 
     return response.json();
 }

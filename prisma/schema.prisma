@@ -5,6 +5,8 @@
 // Brandon Christian
 // Date: 2/19/2026
 // Added BehavioralPrompt
+// Date: 3/17/2026
+// Added StoredBehavioralSession
 
 generator client {
   provider = "prisma-client-js"
@@ -130,6 +132,7 @@ model InterviewSession {
   overallScore  Float?
   feedback      Json?
   responses     InterviewResponse[]
+  savedData		StoredBehavioralSession[]
 
   question1Id   String?                // reference TechnicalQuestion.id
   question2Id   String?                // reference TechnicalQuestion.id
@@ -194,6 +197,14 @@ model InterviewReport {
 model BehavioralPrompt {
   id            String      @id @default(cuid())
   prompt		String
+}
+
+model StoredBehavioralSession {
+	id			String		 @id @default(cuid())
+	sessionId   String
+	session     InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+	audioData	Bytes
+	videoData	Bytes
 }
 
 // ============================================

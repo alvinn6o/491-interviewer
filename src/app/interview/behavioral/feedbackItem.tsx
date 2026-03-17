@@ -47,3 +47,11 @@ export function CreateFeedbackItem(acategory: string, acontent: string, ascore: 
 
     return fbItem   
 }
+
+export function CombineFeedback(a: FeedbackItem[], b: FeedbackItem[]) {
+    a.forEach((fbItem) => {
+        b.push(fbItem);
+    });
+
+    return b;
+}
