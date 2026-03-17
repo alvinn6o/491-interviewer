@@ -24,9 +24,6 @@ import { BIEnd } from "./end";
 
 export async function OnStartInterviewClicked(): Promise<any> {
 
-    //TODO:
-    //Begin camera recording
-
     //Get Interview Prompt from server
     const prompt = await GetPrompt();
 

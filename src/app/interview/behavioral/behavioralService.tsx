@@ -146,3 +146,11 @@ export async function EndSession(sessionId: string) {
 
     return response.json();
 }
+
+export async function ResumeSession() {
+    const response = await fetch(`/api/behavioral/resume`, {
+        method: "GET"
+    });
+
+    return response.json();
+}
