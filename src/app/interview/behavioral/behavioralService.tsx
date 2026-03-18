@@ -84,29 +84,26 @@ export async function GetPrompt() {
     
 }
 
-export async function SaveSession(audioData: Blob, videoData: any) {
-
-    //TODO: get session ID and store that?
-    //have to make a session as soon as we start!
-
-    const mimeType = audioData.type;
-    const extension = mimeType.split("/")[1];
-
+export async function PauseSession(sessionId: string, audioData: Blob, videoData: any) {
     const formData = new FormData();
 
     formData.append(
         "audio",
-        audioData,
-        `recording.${extension}`
+        audioData
     );
 
     formData.append(
         "video",
         videoData
-    )
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
+    );
 
 
-    const response = await fetch("/api/behavioral/save", {
+    const response = await fetch("/api/behavioral/pause", {
         method: "POST",
         body: formData
     })

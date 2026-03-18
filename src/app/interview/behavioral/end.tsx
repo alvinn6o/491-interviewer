@@ -14,11 +14,12 @@ import type { ReactNode } from "react";
 import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
-import { SendAudioVideoToServer , EndSession} from "./behavioralService";
+import { SendAudioVideoToServer, EndSession, PauseSession } from "./behavioralService";
 
 //TODO: have to refactor to combine audio and video data into one call
-export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
+export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, usePause }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
+    usePause: boolean;
     waitForAudio: () => Promise<Blob>;
     waitForVideo: () => Promise<Blob>;
     sessionId: string;
@@ -31,6 +32,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
     //Modified for UC 1 to include loading and error states
     const [data, setFeedbackData] = useState(test_items);
     const [loading, setLoading] = useState(false);
+    const [usePauseScreen, setUsePauseScreen] = useState(false);
     const [error, setError] = useState(false);
     const [video, setVideo] = useState<Blob | null>(null);
     const [audio, setAudio] = useState<Blob | null>(null);
@@ -53,16 +55,28 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
 
                 console.log("Waiting for audioData to be analyzed with session ID: " + sessionId)
 
-                const result = await SendAudioVideoToServer(audioData, videoData);      //await for the audio data to be uploaded
-                const updatedSession = await EndSession(sessionId);   //update session with completed state
+                if (usePause) {
+                    //Pause session instead of ending it
+                    const result = await PauseSession(sessionId, audioData, videoData);
 
-                console.log("Completed audio upload and session end.")
+                    setUsePauseScreen(true);
 
-                //store data in useState
-                setFeedbackData(result);
-                setVideo(videoData);
-                setAudio(audioData);
+                }
+                else {
+
+                    const result = await SendAudioVideoToServer(audioData, videoData);      //await for the audio data to be uploaded
+                    const updatedSession = await EndSession(sessionId);   //update session with completed state
+
+                    console.log("Completed audio upload and session end.")
+
+                    //store data in useState
+                    setFeedbackData(result);
+                    setVideo(videoData);
+                    setAudio(audioData);
+                }
+
                 setLoading(false);
+
             } catch (err) {
                 setLoading(false);
                 setError(true);
@@ -152,7 +166,12 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId }: {
     return (
         <div className={`${styles.centered_column} w-full`}>
             <RecordedVideoBox video={video} audio={audio} />
-            
+
+            {usePauseScreen && (
+                <div>
+                    Session successfully paused. It is now safe to leave this screen.
+                </div>
+            ) }
 
             {loading && (
                 <div>

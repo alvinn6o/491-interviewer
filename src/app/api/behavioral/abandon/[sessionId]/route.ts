@@ -27,7 +27,11 @@ export async function POST(
             },
             data: {
                 completedAt: new Date(),
-                status: "ABANDONED"
+                status: "ABANDONED",
+                savedData: {
+                    deleteMany: {}
+                }
+
             }
         });
 

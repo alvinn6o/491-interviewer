@@ -9,10 +9,10 @@ import { auth } from "src/server/auth"
 export async function GET(
     request: Request
 ) {
-    return GetCurrentUserSessions();
+    return GetPausedSession();
 }
 
-export async function GetCurrentUserSessions() {
+export async function GetPausedSession() {
     const session = await auth();
 
     if (session && session.user) {
@@ -22,10 +22,13 @@ export async function GetCurrentUserSessions() {
             where: {
                 userId: id,
                 status: "IN_PROGRESS",
-                type: "BEHAVIORAL"
+                type: "BEHAVIORAL",
+                pausedAt: {
+                    not: null
+                }
             },
             include: {
-                responses: true,
+                responses: false,
             }
         });
 

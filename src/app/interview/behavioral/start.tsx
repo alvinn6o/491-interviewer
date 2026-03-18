@@ -109,7 +109,13 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
 }
 
 function PromptToResume(session: any, onConfirm: () => void, onDeny: () => void) {
-    const result = window.confirm("There is an in progress session started on " + session.startedAt + ". Resume?");
+    const formattedDate = new Date(session.pausedAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+
+    const result = window.confirm("There is an in progress session started on " + formattedDate + ". Resume?");
 
     if (result) {
         onConfirm();

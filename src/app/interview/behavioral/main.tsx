@@ -144,17 +144,19 @@ function ViewSwitcher() {
     const waitForAudio = waitForData(audioRef, "Waiting for audio...");
     const waitForVideo = waitForData(storeVideoRef, "Waiting for video...");
 
+    const [usePause, setPause] = useState(false);
+
 
     switch (pageState) {
         case BIPageState.START:
             return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} storeVideoRef={storeVideoRef} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} sessionId={sessionId} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} sessionId={sessionId} setPause={setPause} />);
 
         case BIPageState.END:
             console.log("Loading END with id: " + sessionId);
-            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} waitForVideo={waitForVideo} sessionId={sessionId} />);
+            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} waitForVideo={waitForVideo} sessionId={sessionId} usePause={usePause} />);
     }
 }
 
