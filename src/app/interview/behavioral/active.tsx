@@ -14,16 +14,17 @@ import React from "react";
 import type { ReactNode } from "react";
 import { AudioMeterAndCameraBox } from "./userInput"
 import { BIPageState, OnFailedEndInterview } from "./main";
-import { AbandonSession } from "./behavioralService";
+import { AbandonSession, PauseSession } from "./behavioralService";
 
 
 
-export function BIActive({ changeState, prompt, audioRef, storeVideoRef, sessionId}: {
+export function BIActive({ changeState, prompt, audioRef, storeVideoRef, sessionId, setPause}: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     audioRef: React.RefObject<Blob | null>;
     storeVideoRef: React.RefObject<Blob | null>;
     prompt: string;
     sessionId: string;
+    setPause: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
     const [loading, setLoading] = useState(false);
 
@@ -70,6 +71,23 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
         }
     }
 
+    const PauseInterviewButton = async () => {
+        try {
+            setLoading(true);
+
+            //rather than pause here, continue to the next screen to allow the
+            //recording to end naturally
+            //use marker value to indicate we want to pause the session not end it in the next screen
+            setPause(true);
+            changeState(BIPageState.END);
+
+        } catch (error) {
+            console.log(error);
+            OnFailedEndInterview();
+            setLoading(false);
+        }
+    }
+
     const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
 
         return (
@@ -92,7 +110,7 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
             {!loading && (
                 <div className={`${styles.centered_row}`}>
                     <button className="orange_button" onClick={EndInterviewButton}>End Interview</button> 
-                    <button className="orange_button" onClick={EndInterviewButton}>Pause TODO</button> 
+                    <button className="orange_button" onClick={PauseInterviewButton}>Pause and Resume Later</button> 
                     <button className="orange_button" onClick={AbandonInterviewButton}>Abandon</button>
                 </div>
             )}

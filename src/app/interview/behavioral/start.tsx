@@ -7,11 +7,15 @@
 //Date: 2/19/2026
 //Move to start.tsx
 
+//Date: 3/17/2026
+//implement resume feature
+
 import styles from "./test.module.css";
 import React from "react";
 import { AudioMeterAndCameraBox } from "./userInput";
 import { BIPageState, OnStartInterviewClicked, OnFailedStartInterview } from "./main";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { AbandonSession, ResumeSession } from "./behavioralService";
 
 
 
@@ -30,10 +34,8 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
             const result = await OnStartInterviewClicked();
 
             //Set response as prompt
+            //and set used session id
             changePrompt(result.prompt);
-
-            console.log("setting id: " + result.session.id);
-
             setSessionId(result.session.id)
 
             //Change state if successful
@@ -46,7 +48,50 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
         }
     };
 
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const hasRun = useRef(false);
+
+    //Check for existing in progress session before allowing new one to be created
+    useEffect(
+        () => {
+
+            //Check guard to ensure useEffect only ever runs once
+            if (hasRun.current) return;
+            hasRun.current = true;
+
+            console.log("start effect ran")
+
+            async function CheckForResumeSession() {
+                const resp = await ResumeSession();
+
+                if (resp.success) {
+
+                    function ContinueToActivePage() {
+                        changePrompt(resp.session.prompt);
+                        setSessionId(resp.session.id);
+                        changeState(BIPageState.ACTIVE);
+                    }
+
+                    function AllowNewSession() {
+                        AbandonSession(resp.session.id);
+                        setLoading(false);
+                    }
+
+                    //Wait for user input to confirm or deny this session
+                    //load is set to true to prevent clicking new session during this time
+                    PromptToResume(resp.session, ContinueToActivePage, AllowNewSession);
+                }
+                else {
+                    //no session to resume, allow new session
+                    setLoading(false);
+                }
+            }
+
+            CheckForResumeSession();
+            
+
+        }, []
+    );
 
     return (
         <div className={`${styles.centered_column} w-full`}>
@@ -61,4 +106,20 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
             
         </div>
     );
+}
+
+function PromptToResume(session: any, onConfirm: () => void, onDeny: () => void) {
+    const formattedDate = new Date(session.pausedAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+
+    const result = window.confirm("There is an in progress session started on " + formattedDate + ". Resume?");
+
+    if (result) {
+        onConfirm();
+    } else {
+        onDeny();
+    }
 }

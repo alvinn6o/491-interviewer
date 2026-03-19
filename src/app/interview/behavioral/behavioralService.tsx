@@ -16,10 +16,10 @@ import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 
 //Wrapper function to simplify calls to behavioral service
-export async function SendAudioVideoToServer(audioData: Blob, videoData: Blob) {
+export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
 
-    const audioFeedback = await SendToServer(audioData, "/api/behavioral/uploadAudio", "audio");
-    const videoFeedback = await SendToServer(videoData, "/api/behavioral/uploadVideo", "video");
+    const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
 
 
     const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
@@ -27,7 +27,7 @@ export async function SendAudioVideoToServer(audioData: Blob, videoData: Blob) {
     return allFeedback;
 }
 
-async function SendToServer(data: Blob, apiURL: string, formDataKey: string) {
+async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
     //Attach data to form data
     //in order to send it to the api
     console.log("Send blob to " + apiURL);
@@ -37,6 +37,11 @@ async function SendToServer(data: Blob, apiURL: string, formDataKey: string) {
     formData.append(
         formDataKey,
         data
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
     );
 
     //obtain json analysis of the feedback data
@@ -84,29 +89,26 @@ export async function GetPrompt() {
     
 }
 
-export async function SaveSession(audioData: Blob, videoData: any) {
-
-    //TODO: get session ID and store that?
-    //have to make a session as soon as we start!
-
-    const mimeType = audioData.type;
-    const extension = mimeType.split("/")[1];
-
+export async function PauseSession(sessionId: string, audioData: Blob, videoData: any) {
     const formData = new FormData();
 
     formData.append(
         "audio",
-        audioData,
-        `recording.${extension}`
+        audioData
     );
 
     formData.append(
         "video",
         videoData
-    )
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
+    );
 
 
-    const response = await fetch("/api/behavioral/save", {
+    const response = await fetch("/api/behavioral/pause", {
         method: "POST",
         body: formData
     })
@@ -123,13 +125,18 @@ export async function AbandonSession(sessionId: string) {
 }
 
 export async function CreateSession(prompt: string) {
+    console.log("Creating session POST")
+
     const response = await fetch("/api/behavioral/create", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
         },
+
         body: JSON.stringify({ prompt }),
     });
+
+    console.log("Created session POST")
 
     return response.json();
 }
@@ -137,6 +144,14 @@ export async function CreateSession(prompt: string) {
 export async function EndSession(sessionId: string) {
     const response = await fetch(`/api/behavioral/end/${sessionId}`, {
         method: "POST"
+    });
+
+    return response.json();
+}
+
+export async function ResumeSession() {
+    const response = await fetch(`/api/behavioral/resume`, {
+        method: "GET"
     });
 
     return response.json();

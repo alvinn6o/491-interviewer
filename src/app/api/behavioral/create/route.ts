@@ -11,8 +11,12 @@ export async function POST(req: NextRequest) {
 
     const session = await auth();
 
+    console.log("recieved POST to create session")
+
     const body = await req.json();
     const { prompt } = body;
+
+    console.log("extracted prompt from body")
 
     if (session && session.user) {
         const response = await db.interviewSession.create(
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
                     type: "BEHAVIORAL",
                     userId: session.user.id,
                     status: "IN_PROGRESS",
-                    //prompt: prompt TODO: add prompt field to interviewSession
+                    prompt: prompt 
                 },
                 select: {
                     id: true,

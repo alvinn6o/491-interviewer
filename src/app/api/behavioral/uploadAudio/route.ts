@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { ProcessAudioToText, ProcessTextToTokens } from "./audioProcess";
+import { db } from "~/server/db";
 
 export async function POST(req: NextRequest) {
 
@@ -20,10 +21,29 @@ export async function POST(req: NextRequest) {
         );
     }
 
+
     //Process Audio
-    //TODO: process call is hidden to save costs on API calls during testing
-    //const text = await ProcessAudioToText(audio);
-    //const tokensByCount = ProcessTextToTokens(text);
+    let text = await ProcessAudioToText(audio);
+
+    //gather all text transcripts of all StoredBehaioralSessions and combine with result text
+    const sessionId = formData.get("sessionId") as string;
+
+    const storedSessions = await db.storedBehavioralSession.findMany({
+        where: {
+            sessionId: sessionId,
+        }
+    });
+
+    storedSessions.forEach(
+        (storedSession) => {
+            if (storedSession.transcript) {
+                text = text + " " + storedSession.transcript;
+            }
+        }
+    );
+
+    const tokensByCount = ProcessTextToTokens(text);
+
 
     //TODO: send processed results to Behavioral Analysis
 

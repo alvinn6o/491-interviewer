@@ -205,8 +205,8 @@ model StoredBehavioralSession {
 	id			String		 @id @default(cuid())
 	sessionId   String
 	session     InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-	audioData	Bytes
-	videoData	Bytes
+	transcript	String?
+	feedback	Json?
 }
 
 // ============================================
