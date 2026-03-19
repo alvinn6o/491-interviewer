@@ -206,7 +206,7 @@ model StoredBehavioralSession {
 	sessionId   String
 	session     InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 	transcript	String?
-	feedback	Json?
+	videoURL	String?
 }
 
 // ============================================

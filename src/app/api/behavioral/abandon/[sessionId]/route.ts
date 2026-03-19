@@ -31,12 +31,16 @@ export async function POST(
                 savedData: {
                     deleteMany: {}
                 }
-
+            },
+            include: {
+                savedData: true
             }
         });
 
         //Return if successful
         if (interviewSession) {
+
+            //TODO: delete all video URLs
 
             return NextResponse.json(
                 {
@@ -59,4 +63,7 @@ export async function POST(
         }
     );
 }
-    
+
+function DeleteVideoData(videoURL: string) {
+
+}

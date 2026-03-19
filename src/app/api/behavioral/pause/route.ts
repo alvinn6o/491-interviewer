@@ -46,6 +46,8 @@ export async function POST(
 
             //perform analysis of video feedback now as it is too expensie
             //to store the ideo itself
+            //TODO: rather than get feedback, store video data on aws
+            //and save link, then download later
             const videoFeedback = await GetVideoFeedback(video);
 
             //store the transcript and partial feedback on the DB
@@ -87,4 +89,9 @@ export async function POST(
         }
     );
 }
-    
+
+function StoreVideoData(videoData: Blob) {
+
+
+}
+
