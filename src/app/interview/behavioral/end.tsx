@@ -67,7 +67,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                 }
                 else {
 
-                    const result = await SendAudioVideoToServer(audioData, videoData); //await for the audio data to be uploaded
+                    const result = await SendAudioVideoToServer(sessionId, audioData, videoData); //await for the audio data to be uploaded
                     const updatedSession = await EndSession(sessionId);   //update session with completed state
 
                     console.log("Completed audio upload and session end.")

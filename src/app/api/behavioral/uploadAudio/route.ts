@@ -49,12 +49,7 @@ export async function POST(req: NextRequest) {
 
     //TODO: test items in place of actual data
     const test_items = [
-        { category: "Notes", content: "Analysis Unimplemented. Text transcription disabled to save API costs in uploadAudio/route.ts", score: 1 },
-        { category: "Eye Contact", content: "", score: 1 },
-        { category: "Confidence", content: "", score: 2 },
-        { category: "Quality of Answers", content: "", score: 3 },
-        { category: "Sociability", content: "", score: 4 },
-        { category: "Clear Speach", content: "", score: 5 },
+        { category: "Notes", content: text, score: 0 }
 
     ];
 
