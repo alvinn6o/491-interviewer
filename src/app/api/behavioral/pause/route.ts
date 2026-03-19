@@ -7,19 +7,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "src/server/auth"
+import { ProcessAudioToText } from "../uploadAudio/audioProcess"
+import { GetVideoFeedback } from "../uploadVideo/route"
 
 export async function POST(
     req: NextRequest
-) {
-
-    //ignore all for now, need new solution
-    return NextResponse.json(
-        {
-            success: false
-        }
-    );
-
-    /*
+) { 
     const session = await auth();
 
 
@@ -27,12 +20,9 @@ export async function POST(
 
         //extract the audio video and session id from the formData sent
         const formData = await req.formData();
-        const audio = formData.get("audio") as Blob;
-        const video = formData.get("video") as Blob;
         const sessionId = formData.get("sessionId") as string;
 
         console.log("pausing session id: " + sessionId)
-
 
         //Update the first session whose ID matches the one we
         //created at session start for this user
@@ -47,14 +37,22 @@ export async function POST(
         });
 
         if (interviewSession) {
-            //convert data to form storable on DB
-            const audioBuffer = Buffer.from(await audio.arrayBuffer());
-            const videoBuffer = Buffer.from(await video.arrayBuffer());
 
+            const audio = formData.get("audio") as Blob;
+            const video = formData.get("video") as Blob;
+
+            //convert audio to text to save it in more compact form
+            const textTranscript = await ProcessAudioToText(audio);
+
+            //perform analysis of video feedback now as it is too expensie
+            //to store the ideo itself
+            const videoFeedback = await GetVideoFeedback(video);
+
+            //store the transcript and partial feedback on the DB
             const savedData = await db.storedBehavioralSession.create({
                 data: {
-                    audioData: audioBuffer,
-                    videoData: videoBuffer,
+                    transcript: textTranscript,
+                    feedback: videoFeedback,
                     session: {
                         connect: {
                             id: sessionId,
@@ -87,6 +85,6 @@ export async function POST(
         {
             success: false
         }
-    );*/
+    );
 }
     

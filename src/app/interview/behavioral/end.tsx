@@ -59,12 +59,15 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                     //Pause session instead of ending it
                     const result = await PauseSession(sessionId, audioData, videoData);
 
-                    setUsePauseScreen(true);
+                    if (!result.success)
+                        setError(true);
+                    else
+                        setUsePauseScreen(true);
 
                 }
                 else {
 
-                    const result = await SendAudioVideoToServer(audioData, videoData);      //await for the audio data to be uploaded
+                    const result = await SendAudioVideoToServer(audioData, videoData); //await for the audio data to be uploaded
                     const updatedSession = await EndSession(sessionId);   //update session with completed state
 
                     console.log("Completed audio upload and session end.")
@@ -163,15 +166,18 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
         );
     };
 
+    if (usePauseScreen) {
+        return (
+            <div>
+                Session successfully paused. It is now safe to leave this screen.
+            </div>
+        );
+    }
+
     return (
         <div className={`${styles.centered_column} w-full`}>
-            <RecordedVideoBox video={video} audio={audio} />
 
-            {usePauseScreen && (
-                <div>
-                    Session successfully paused. It is now safe to leave this screen.
-                </div>
-            ) }
+            <RecordedVideoBox video={video} audio={audio} />
 
             {loading && (
                 <div>

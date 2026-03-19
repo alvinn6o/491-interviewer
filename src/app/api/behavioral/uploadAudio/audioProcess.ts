@@ -8,6 +8,8 @@ import TokenizeText from "./tokenizeText";
 
 export async function ProcessAudioToText(audioData: Blob) {
     //Send audio blob to API
+    return "transcription disabled to avoid API costs during testing. Re-enable in audioProcess.ts"
+
     const text: string = await TranscribeAudioAsync(audioData);
 
     return text; 

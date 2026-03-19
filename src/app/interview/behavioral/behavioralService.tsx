@@ -16,10 +16,10 @@ import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 
 //Wrapper function to simplify calls to behavioral service
-export async function SendAudioVideoToServer(audioData: Blob, videoData: Blob) {
+export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
 
-    const audioFeedback = await SendToServer(audioData, "/api/behavioral/uploadAudio", "audio");
-    const videoFeedback = await SendToServer(videoData, "/api/behavioral/uploadVideo", "video");
+    const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
 
 
     const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
@@ -27,7 +27,7 @@ export async function SendAudioVideoToServer(audioData: Blob, videoData: Blob) {
     return allFeedback;
 }
 
-async function SendToServer(data: Blob, apiURL: string, formDataKey: string) {
+async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
     //Attach data to form data
     //in order to send it to the api
     console.log("Send blob to " + apiURL);
@@ -37,6 +37,11 @@ async function SendToServer(data: Blob, apiURL: string, formDataKey: string) {
     formData.append(
         formDataKey,
         data
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
     );
 
     //obtain json analysis of the feedback data
