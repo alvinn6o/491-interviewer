@@ -1,6 +1,6 @@
 //Author: Brandon Christian
-//Date: 3/16/2026
-//update existing session to be abandoned
+//Date: 3/19/2026
+//set resume date of existing session
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
@@ -15,32 +15,21 @@ export async function POST(
 
     const session = await auth();
 
-    console.log("interiew session id: " + sessionId)
-
     if (session && session.user) {
-        //Update the first session whose ID matches the one we
-        //created at session start for this user
+
+        //Update resumed date
         const interviewSession = await db.interviewSession.update({
             where: {
                 userId: session.user.id,
                 id: sessionId,
             },
             data: {
-                completedAt: new Date(),
-                status: "ABANDONED",
-                savedData: {
-                    deleteMany: {}
-                }
-            },
-            include: {
-                savedData: true
+                resumedAt: new Date()
             }
         });
 
         //Return if successful
         if (interviewSession) {
-
-            DeleteAllVideoData(interviewSession.savedData);
 
             return NextResponse.json(
                 {
@@ -62,17 +51,4 @@ export async function POST(
             session: null
         }
     );
-}
-
-function DeleteVideoData(videoURL: string) {
-    //TODO
-}
-
-function DeleteAllVideoData(storedSessions: any[]) {
-    storedSessions.forEach(
-        (session) => {
-            if (session.videoURL)
-                DeleteVideoData(session.videoURL);
-        }
-    )
 }

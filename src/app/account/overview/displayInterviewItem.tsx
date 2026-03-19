@@ -13,6 +13,7 @@
 import type { InterviewItem } from "./interviewItem";
 import { useState } from "react";
 import type { InterviewResponse } from "./interviewResponse";
+import type { ReactNode } from "react";
 
 
 enum InterviewItemState {
@@ -104,17 +105,29 @@ function InterviewItemOverview({ title, status, setState, interviewItem}: {
 
 }
 
+function FormattedDate(date: any) {
+    const formattedStarteDate = new Date(date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+    });
+
+    return formattedStarteDate
+}
+
 function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem }) {
     //Display actual overview content
 
+
+
     return (
-        <div>
+        <div>   
             <div>Info: </div>
             <div className={`p-2 m-1 border rounded-md w-auto`}>
-                <div>Started Date: {interviewItem.startedAt.toString()}</div>
+                <div>Started Date: {FormattedDate(interviewItem.startedAt)}</div>
 
                 {interviewItem.completedAt && (
-                    <div>Completed Date: {interviewItem.completedAt.toString()}</div>
+                    <div>Completed Date: {FormattedDate(interviewItem.completedAt)}</div>
                 )}
 
                 <div>Favorited: {interviewItem.isFavorite.toString()}</div>
@@ -127,7 +140,7 @@ function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem 
                 <div>
                     <div>Feedback: </div>
                     <div className={`p-2 m-1 border rounded-md w-auto`}>
-                        <div>{JSON.stringify(interviewItem.feedback)}</div>
+                        <DisplayFeedback feedback={interviewItem.feedback}/>
                     </div>
                 </div>
             )}
@@ -142,8 +155,87 @@ function InterviewItemInfoBox({ interviewItem }: { interviewItem: InterviewItem 
 
             )}
 
-            
         </div>
+    )
+}
+
+function DisplayFeedback({ feedback }: { feedback: any[] }) {
+
+    const DataDisplay = ({ fullData }: { fullData: any[] }) => {
+
+        //remove null items
+        const data = fullData.filter(item => item != null)
+
+        const notes = data.filter(item => item.key === "Notes");
+        const otherData = data.filter(item => item.key !== "Notes");
+
+        const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
+
+            return (
+                <div className="outline-2 rounded w-full">
+                    <h2>{title}</h2>
+                    <hr />
+                    {children}
+                </div>
+            )
+        };
+
+        const FeedbackList = ({ data }: { data: any[] }) => {
+
+            const splitFeedback = (data: any[]) => {
+                const middle = Math.ceil(data.length / 2); // rounds up if odd
+                const firstHalf = data.slice(0, middle);
+                const secondHalf = data.slice(middle);
+
+                return [firstHalf, secondHalf];
+            };
+
+            const [firstHalf, secondHalf] = splitFeedback(data);
+
+            return (
+                <div className="flex flex-row gap-4 p-2">
+                    <div className="flex flex-col">
+                        {firstHalf?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <h3>{item.key}</h3>
+                                    <span>{item.score.toString()}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                    <div className="flex flex-col">
+                        {secondHalf?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <h3>{item.key}</h3>
+                                    <span>{item.score.toString()}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                </div>
+            );
+
+        };
+
+        return (
+            <div >
+                <DisplayBox title="Notes">
+                    {notes[0]?.content}
+                </DisplayBox>
+                <br></br>
+                <DisplayBox title="Statistics">
+                    <FeedbackList data={otherData} />
+                </DisplayBox>
+            </div>
+        );
+    };
+
+    return (
+        <DataDisplay fullData={feedback} />
     )
 }
 

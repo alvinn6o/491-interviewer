@@ -15,16 +15,17 @@ import React from "react";
 import { AudioMeterAndCameraBox } from "./userInput";
 import { BIPageState, OnStartInterviewClicked, OnFailedStartInterview } from "./main";
 import { useState, useEffect, useRef } from "react";
-import { AbandonSession, ResumeSession } from "./behavioralService";
+import { AbandonSession, ResumeSession, FindPausedSession } from "./behavioralService";
 
 
 
-export function BIStart({ changeState, changePrompt, audioRef, setSessionId, storeVideoRef }: {
+export function BIStart({ changeState, changePrompt, audioRef, setSessionId, storeVideoRef, setResume }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     changePrompt: React.Dispatch<React.SetStateAction<string>>;
     audioRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
     storeVideoRef: React.RefObject<Blob | null>; //Unused but necessary for the component format
     setSessionId: React.Dispatch<React.SetStateAction<string>>;
+    setResume: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
 
     const StartInterviewButton = async () => {
@@ -62,24 +63,39 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
             console.log("start effect ran")
 
             async function CheckForResumeSession() {
-                const resp = await ResumeSession();
+                const findResp = await FindPausedSession();
 
-                if (resp.success) {
+                if (findResp.success) {
 
-                    function ContinueToActivePage() {
-                        changePrompt(resp.session.prompt);
-                        setSessionId(resp.session.id);
-                        changeState(BIPageState.ACTIVE);
+                    if (!findResp.canResume) {
+
+                        //Abandon if previously resumed
+                        AbandonSession(findResp.session.id);
+
                     }
+                    else {
+                        function ContinueToActivePage() {
 
-                    function AllowNewSession() {
-                        AbandonSession(resp.session.id);
-                        setLoading(false);
+                            //Set resume date
+                            ResumeSession(findResp.session.id);
+
+                            //tell other components we are resuming a session
+                            setResume(true);
+
+                            changePrompt(findResp.session.prompt);
+                            setSessionId(findResp.session.id);
+                            changeState(BIPageState.ACTIVE);
+                        }
+
+                        function AllowNewSession() {
+                            AbandonSession(findResp.session.id);
+                            setLoading(false);
+                        }
+
+                        //Wait for user input to confirm or deny this session
+                        //load is set to true to prevent clicking new session during this time
+                        PromptToResume(findResp.session, ContinueToActivePage, AllowNewSession);
                     }
-
-                    //Wait for user input to confirm or deny this session
-                    //load is set to true to prevent clicking new session during this time
-                    PromptToResume(resp.session, ContinueToActivePage, AllowNewSession);
                 }
                 else {
                     //no session to resume, allow new session

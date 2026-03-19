@@ -1,6 +1,6 @@
 //Author: Brandon Christian
-//Date: 3/16/2026
-//update existing session to be abandoned
+//Date: 3/19/2026
+//Set feedback value of table entry
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
@@ -8,10 +8,14 @@ import { auth } from "src/server/auth"
 
 
 export async function POST(
-    request: NextRequest,
+    req: NextRequest,
     { params }: { params: { sessionId: string } }
 ) {
     const { sessionId } = params;
+
+    const formData = await req.formData();
+    const rawFeedback = formData.get("feedback") as string;
+    const feedback = JSON.parse(rawFeedback);
 
     const session = await auth();
 
@@ -26,26 +30,16 @@ export async function POST(
                 id: sessionId,
             },
             data: {
-                completedAt: new Date(),
-                status: "ABANDONED",
-                savedData: {
-                    deleteMany: {}
-                }
-            },
-            include: {
-                savedData: true
+                feedback: feedback
             }
         });
 
         //Return if successful
         if (interviewSession) {
 
-            DeleteAllVideoData(interviewSession.savedData);
-
             return NextResponse.json(
                 {
-                    success: true,
-                    session: interviewSession
+                    success: true
                 }
             );
         }
@@ -58,21 +52,8 @@ export async function POST(
     //Failed to update session for some reason
     return NextResponse.json(
         {
-            success: false,
-            session: null
+            success: false
         }
     );
 }
-
-function DeleteVideoData(videoURL: string) {
-    //TODO
-}
-
-function DeleteAllVideoData(storedSessions: any[]) {
-    storedSessions.forEach(
-        (session) => {
-            if (session.videoURL)
-                DeleteVideoData(session.videoURL);
-        }
-    )
-}
+    

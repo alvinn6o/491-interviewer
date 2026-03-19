@@ -44,17 +44,14 @@ export async function POST(
             //convert audio to text to save it in more compact form
             const textTranscript = await ProcessAudioToText(audio);
 
-            //perform analysis of video feedback now as it is too expensie
-            //to store the ideo itself
-            //TODO: rather than get feedback, store video data on aws
-            //and save link, then download later
-            const videoFeedback = await GetVideoFeedback(video);
+            //store the video itself on an aws server for later
+            const videoURL = await StoreVideoData(video);
 
             //store the transcript and partial feedback on the DB
             const savedData = await db.storedBehavioralSession.create({
                 data: {
                     transcript: textTranscript,
-                    feedback: videoFeedback,
+                    videoURL: videoURL,
                     session: {
                         connect: {
                             id: sessionId,
@@ -90,8 +87,9 @@ export async function POST(
     );
 }
 
-function StoreVideoData(videoData: Blob) {
+async function StoreVideoData(videoData: Blob) {
 
+    return "no url";
 
 }
 
