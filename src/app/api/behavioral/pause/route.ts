@@ -4,11 +4,16 @@
 //and associate it with specific sessionId
 //pause a behavioral session
 
+//packages for video download/upload:
+//npm install @aws-sdk/s3-request-presigner
+//npm install @aws-sdk/client-s3
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "src/server/auth"
 import { ProcessAudioToText } from "../uploadAudio/audioProcess"
-import { GetVideoFeedback } from "../uploadVideo/route"
+import { StoreVideoData } from "./manageVideoStorage";
+
 
 export async function POST(
     req: NextRequest
@@ -45,7 +50,7 @@ export async function POST(
             const textTranscript = await ProcessAudioToText(audio);
 
             //store the video itself on an aws server for later
-            const videoURL = await StoreVideoData(video);
+            const videoURL = await StoreVideoData(video, session.user.id, sessionId);
 
             //store the transcript and partial feedback on the DB
             const savedData = await db.storedBehavioralSession.create({
@@ -87,9 +92,8 @@ export async function POST(
     );
 }
 
-async function StoreVideoData(videoData: Blob) {
 
-    return "no url";
 
-}
+
+
 

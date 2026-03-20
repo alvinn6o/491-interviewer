@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { auth } from "src/server/auth"
+import { ClearVideoData } from "../../pause/manageVideoStorage"
 
 
 export async function POST(
@@ -64,15 +65,11 @@ export async function POST(
     );
 }
 
-function DeleteVideoData(videoURL: string) {
-    //TODO
-}
-
 function DeleteAllVideoData(storedSessions: any[]) {
     storedSessions.forEach(
         (session) => {
             if (session.videoURL)
-                DeleteVideoData(session.videoURL);
+                ClearVideoData(session.videoURL);
         }
     )
 }

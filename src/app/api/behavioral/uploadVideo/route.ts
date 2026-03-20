@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
+import { DownloadVideoData } from "../pause/manageVideoStorage"
 
 export async function POST(req: NextRequest) {
 
@@ -28,18 +29,20 @@ export async function POST(req: NextRequest) {
 
     //Combine any stored videos before anaylsis
     const sessionId = formData.get("sessionId") as string;
-    const fullVideo = await DownloadAndCombineVideos(video, sessionId);
+    const videos: Blob[] = await DownloadAllVideos(video, sessionId);
 
     //Get analysis of video from service
-    const feedback_items: any[] = await GetVideoFeedback(fullVideo);
+    const feedback_items: any[] = await GetVideoFeedbackFromMultiple(videos);
 
     //send to behavioralSerice.tsx
     return NextResponse.json(feedback_items);
 }
 
-export async function GetVideoFeedback(video: Blob) {
+export async function GetVideoFeedbackFromMultiple(videos: Blob[]) {
 
-    //TODO: send video to facial analyis service
+    //TODO: send videos to facial analyis service
+
+
     const test_items = [
         { category: "Eye Contact", content: "", score: 1 },
         { category: "Confidence", content: "", score: 2 },
@@ -52,7 +55,7 @@ export async function GetVideoFeedback(video: Blob) {
     return test_items;
 }
 
-async function DownloadAndCombineVideos(baseVideo: Blob, sessionId: string) {
+async function DownloadAllVideos(baseVideo: Blob, sessionId: string) {
 
     const storedSessions = await db.storedBehavioralSession.findMany({
         where: {
@@ -60,6 +63,20 @@ async function DownloadAndCombineVideos(baseVideo: Blob, sessionId: string) {
         }
     });
 
-    //TODO:
-    return baseVideo;
+    const videos: Blob[] = [baseVideo];
+
+    storedSessions.forEach(
+        async (session) => {
+            if (session.videoURL) {
+                //labled as videoURL but actually storage key
+                const videoData: Blob | null = await DownloadVideoData(session.videoURL);
+
+                if (videoData) {
+                    videos.push(videoData);
+                }
+            }
+        }
+    )
+
+    return videos;
 }
