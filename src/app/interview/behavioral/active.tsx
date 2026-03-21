@@ -18,13 +18,14 @@ import { AbandonSession, PauseSession } from "./behavioralService";
 
 
 
-export function BIActive({ changeState, prompt, audioRef, storeVideoRef, sessionId, setPause}: {
+export function BIActive({ changeState, prompt, audioRef, storeVideoRef, sessionId, setPause, resumedBefore}: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     audioRef: React.RefObject<Blob | null>;
     storeVideoRef: React.RefObject<Blob | null>;
     prompt: string;
     sessionId: string;
     setPause: React.Dispatch<React.SetStateAction<boolean>>;
+    resumedBefore: boolean
 }) {
     const [loading, setLoading] = useState(false);
 
@@ -57,11 +58,21 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
 
             setLoading(true);
 
-            //Update interview to be abandoned status
-            const resp = await AbandonSession(sessionId);
+            async function OnAbandonConfirm() {
+                //Update interview to be abandoned status
+                const resp = await AbandonSession(sessionId);
 
-            //navigate to home page
-            window.location.href = "/";
+                //navigate to home page
+                window.location.href = "/";
+            }
+
+            function OnAbandonDeny() {
+                setLoading(false);
+            }
+
+            const msg = "Abandoned sessions cannot be continued. Abandon?"
+
+            Prompt(msg, OnAbandonConfirm, OnAbandonDeny);
 
         } catch (error) {
             console.log(error);
@@ -75,11 +86,21 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
         try {
             setLoading(true);
 
-            //rather than pause here, continue to the next screen to allow the
-            //recording to end naturally
-            //use marker value to indicate we want to pause the session not end it in the next screen
-            setPause(true);
-            changeState(BIPageState.END);
+            function OnPauseConfirm() {
+                //rather than pause here, continue to the next screen to allow the
+                //recording to end naturally
+                //use marker value to indicate we want to pause the session not end it in the next screen
+                setPause(true);
+                changeState(BIPageState.END);
+            }
+
+            function OnPauseDeny() {
+                setLoading(false);
+            }
+
+            const msg = "Session will be paused and exited to resume later. You can only pause once. Continue?";
+
+            Prompt(msg, OnPauseConfirm, OnPauseDeny);
 
         } catch (error) {
             console.log(error);
@@ -110,7 +131,7 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
             {!loading && (
                 <div className={`${styles.centered_row}`}>
                     <button className="orange_button" onClick={EndInterviewButton}>End Interview</button> 
-                    <button className="orange_button" onClick={PauseInterviewButton}>Pause and Resume Later</button> 
+                    <PauseButton onClick={PauseInterviewButton} resumedBefore={resumedBefore} />
                     <button className="orange_button" onClick={AbandonInterviewButton}>Abandon</button>
                 </div>
             )}
@@ -123,6 +144,31 @@ export function BIActive({ changeState, prompt, audioRef, storeVideoRef, session
             
         </div>
     );
+}
+
+function PauseButton({ onClick, resumedBefore }: {
+    onClick: React.MouseEventHandler<HTMLButtonElement>
+    resumedBefore: boolean
+}) {
+
+    if (!resumedBefore) {
+        return (<button className="orange_button" onClick={onClick}>Pause and Resume Later</button>);
+    }
+    else {
+        return (<button className="orange_button" >Pause Used</button>);
+    }
+
+}
+
+function Prompt(text: string, onConfirm: () => void, onDeny: () => void) {
+
+    const result = window.confirm(text);
+
+    if (result) {
+        onConfirm();
+    } else {
+        onDeny();
+    }
 }
 
 

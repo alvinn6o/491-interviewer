@@ -12,7 +12,8 @@ export async function GET(
     return GetPausedSession();
 }
 
-export async function GetPausedSession() {
+
+async function GetPausedSession() {
     const session = await auth();
 
     if (session && session.user) {
@@ -32,10 +33,23 @@ export async function GetPausedSession() {
             }
         });
 
+        //No session found
         if (!inprogressSession) {
             return NextResponse.json(
                 {
                     success: false,
+                    canResume: false,
+                    session: null
+                }
+            );
+        }
+
+        //Session already resumed before
+        if (inprogressSession.resumedAt) {
+            return NextResponse.json(
+                {
+                    success: true,
+                    canResume: false,
                     session: null
                 }
             );
@@ -44,6 +58,7 @@ export async function GetPausedSession() {
         return NextResponse.json(
             {
                 success: true,
+                canResume: true,
                 session: inprogressSession
             }
         );
@@ -52,6 +67,7 @@ export async function GetPausedSession() {
     return NextResponse.json(
         {
             success: false,
+            canResume: false,
             session: null
         }
     );

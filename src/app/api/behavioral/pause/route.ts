@@ -4,85 +4,25 @@
 //and associate it with specific sessionId
 //pause a behavioral session
 
+//packages for video download/upload:
+//npm install @aws-sdk/s3-request-presigner
+//npm install @aws-sdk/client-s3
+
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "~/server/db";
-import { auth } from "src/server/auth"
-import { ProcessAudioToText } from "../uploadAudio/audioProcess"
-import { GetVideoFeedback } from "../uploadVideo/route"
+import { auth } from "src/server/auth";
+import { PauseSession } from "./pauseSession";
+
 
 export async function POST(
     req: NextRequest
 ) { 
     const session = await auth();
 
-
     if (session && session.user) {
-
-        //extract the audio video and session id from the formData sent
-        const formData = await req.formData();
-        const sessionId = formData.get("sessionId") as string;
-
-        console.log("pausing session id: " + sessionId)
-
-        //Update the first session whose ID matches the one we
-        //created at session start for this user
-        const interviewSession = await db.interviewSession.update({
-            where: {
-                userId: session.user.id,
-                id: sessionId,
-            },
-            data: {
-                pausedAt: new Date()
-            }
-        });
-
-        if (interviewSession) {
-
-            const audio = formData.get("audio") as Blob;
-            const video = formData.get("video") as Blob;
-
-            //convert audio to text to save it in more compact form
-            const textTranscript = await ProcessAudioToText(audio);
-
-            //perform analysis of video feedback now as it is too expensie
-            //to store the ideo itself
-            //TODO: rather than get feedback, store video data on aws
-            //and save link, then download later
-            const videoFeedback = await GetVideoFeedback(video);
-
-            //store the transcript and partial feedback on the DB
-            const savedData = await db.storedBehavioralSession.create({
-                data: {
-                    transcript: textTranscript,
-                    feedback: videoFeedback,
-                    session: {
-                        connect: {
-                            id: sessionId,
-                        },
-                    }
-                }
-            });
-
-            //Return if successful
-            if (savedData) {
-
-                return NextResponse.json(
-                    {
-                        success: true
-                    }
-                );
-            }
-            else {
-                console.log("failed to create stored data ")
-            }
-        } else {
-            console.log("failed to find session of id " + sessionId)
-        }
-
-        
+        return PauseSession(req, session.user.id);
     }
 
-    //Failed to update session for some reason
+    //Failed to authenticate user
     return NextResponse.json(
         {
             success: false
@@ -90,8 +30,8 @@ export async function POST(
     );
 }
 
-function StoreVideoData(videoData: Blob) {
 
 
-}
+
+
 

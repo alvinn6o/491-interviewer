@@ -24,6 +24,18 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
 
     const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
 
+    const formData = new FormData();
+
+    formData.append(
+        "feedback",
+        JSON.stringify(allFeedback)
+    );
+
+    const response = await fetch(`/api/behavioral/setFeedback/${sessionId}`, {
+        method: "POST",
+        body: formData
+    });
+
     return allFeedback;
 }
 
@@ -149,9 +161,17 @@ export async function EndSession(sessionId: string) {
     return response.json();
 }
 
-export async function ResumeSession() {
+export async function FindPausedSession() {
     const response = await fetch(`/api/behavioral/resume`, {
         method: "GET"
+    });
+
+    return response.json();
+}
+
+export async function ResumeSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/resume/${sessionId}`, {
+        method: "POST"
     });
 
     return response.json();
