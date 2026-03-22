@@ -3,7 +3,7 @@
 // Dylan Hartley
 // 12/12/2025
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
 import { useInterviewSession, type SessionResponse } from "./useInterviewSession";
 import allQuestions from "../../../prisma/data/consolidated-questions.json";
@@ -101,6 +101,23 @@ export default function TechnicalInterviewViewSwitcher() {
   const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
     useInterviewSession(handleTimeExpired);
 
+  // Pause the session in the DB when the user navigates away from the page
+  useEffect(() => {
+    function handleBeforeUnload() {
+      if (session.status === "active" && session.dbSessionId) {
+        navigator.sendBeacon(
+          `/api/interview/session/currentuser/${session.dbSessionId}`,
+          JSON.stringify({ action: "pause" })
+        );
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [session.status, session.dbSessionId]);
   // When the language changes, reload the starter code for the current question
   function handleLanguageChange(newLang: SupportedLanguage) {
     setLanguage(newLang);
