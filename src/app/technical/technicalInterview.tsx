@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
-import { useInterviewSession } from "./useInterviewSession";
+import { useInterviewSession, type SessionResponse } from "./useInterviewSession";
 import allQuestions from "../../../prisma/data/consolidated-questions.json";
 
 /* Page States */
@@ -30,9 +30,8 @@ type Question = {
   };
 };
 
-
-//Randomly selects two questions from different difficulty tiers.
-//Valid pairings: Easy+Medium, Easy+Hard, Medium+Hard.
+// Randomly selects two questions from different difficulty tiers.
+// Valid pairings: Easy+Medium, Easy+Hard, Medium+Hard.
 function pickTwoQuestions(): Question[] {
   const easy = allQuestions.filter((q) => q.difficulty === "Easy") as Question[];
   const medium = allQuestions.filter((q) => q.difficulty === "Medium") as Question[];
@@ -89,6 +88,11 @@ export default function TechnicalInterviewViewSwitcher() {
     questions.map(() => false)
   );
 
+  // Store the code written per question so we can save it on finish
+  const [questionCode, setQuestionCode] = useState<string[]>(
+    questions.map(() => "")
+  );
+
   // Called by the hook when the 60 minute timer hits zero
   function handleTimeExpired() {
     setPageState(TIPageState.END);
@@ -107,33 +111,57 @@ export default function TechnicalInterviewViewSwitcher() {
     }
   }
 
-  // Start a specific question, also kicks off the session on first entry
-  function startInterview(index: number) {
+  // Save the current editor code into questionCode before navigating away
+  function saveCurrentCode() {
+    setQuestionCode((prev) => {
+      const updated = [...prev];
+      updated[currentQuestionIndex] = code;
+      return updated;
+    });
+  }
+
+  // Start a specific question, also kicks off the DB session on first entry
+  async function startInterview(index: number) {
     setCurrentQuestionIndex(index);
     setPageState(TIPageState.ACTIVE);
 
-    // Load the starter code for the selected question in the current language
+    // Restore previously written code for this question if it exists
     const selectedQuestion = questions[index];
     if (selectedQuestion) {
-      const starter = selectedQuestion.starterCode[language];
-      setCode(starter ?? getStarterCode(language));
+      const savedCode = questionCode[index];
+      if (savedCode) {
+        setCode(savedCode);
+      } else {
+        const starter = selectedQuestion.starterCode[language];
+        setCode(starter ?? getStarterCode(language));
+      }
     }
 
     if (session.status === "idle") {
-      startSession();
+      // First entry — create the session in the DB with both question IDs
+      await startSession(questions[0]!.id, questions[1]!.id);
     } else if (session.status === "paused") {
-      resumeSession();
+      await resumeSession();
     }
   }
 
-  // Finish the interview early
-  function finishEarly() {
-    endSession();
+  // Finish the interview early — saves all responses to DB
+  async function finishEarly() {
+    saveCurrentCode();
+
+    // Build response array from the code written for each question
+    const responses: SessionResponse[] = questions.map((q, idx) => ({
+      question: q.title,
+      answer: questionCode[idx] ?? "",
+    }));
+
+    await endSession(responses);
     setPageState(TIPageState.END);
   }
 
-  // Go back to question list, timer keeps running
+  // Go back to question list — saves code, timer keeps running
   function backToQuestions() {
+    saveCurrentCode();
     setPageState(TIPageState.START);
   }
 
@@ -150,6 +178,13 @@ export default function TechnicalInterviewViewSwitcher() {
     };
     setOutput(JSON.stringify(payload, null, 2));
     setPassed(null);
+
+    // Save latest code on run
+    setQuestionCode((prev) => {
+      const updated = [...prev];
+      updated[currentQuestionIndex] = code;
+      return updated;
+    });
   }
 
   // Returns a colored difficulty badge for a question
@@ -235,7 +270,7 @@ export default function TechnicalInterviewViewSwitcher() {
                 </span>
 
                 <button
-                  onClick={() => startInterview(index)}
+                  onClick={() => void startInterview(index)}
                   className="bg-orange-500 text-white px-4 py-1 rounded ml-4 shrink-0"
                 >
                   {session.status === "idle" ? "Start" : "Continue"}
@@ -268,7 +303,7 @@ export default function TechnicalInterviewViewSwitcher() {
 
           <div className="max-w-4xl mx-auto mt-2">
             <button
-              onClick={finishEarly}
+              onClick={() => void finishEarly()}
               disabled={!questionStatus.some(Boolean)}
               className={
                 questionStatus.some(Boolean)

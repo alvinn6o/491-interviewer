@@ -1,7 +1,3 @@
-// Dylan Hartley
-// 12/12/2025
-// Alexander Tu
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -11,10 +7,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// ============================================
-// NextAuth Tables (Required for Authentication)
-// ============================================
 
 model Account {
   id                       String  @id @default(cuid())
@@ -44,18 +36,18 @@ model Session {
 }
 
 model User {
-  id                String              @id @default(cuid())
+  id                String             @id @default(cuid())
   name              String?
-  email             String?             @unique
+  email             String?            @unique
   emailVerified     DateTime?
   image             String?
   password          String?
   accounts          Account[]
+  interviewSessions InterviewSession[]
+  resumeAnalyses    ResumeAnalysis[]
   sessions          Session[]
   profile           UserProfile?
-  resumeAnalyses    ResumeAnalysis[]
-  interviewSessions InterviewSession[]
-  settings      UserSettings?
+  settings          UserSettings?
 }
 
 model VerificationToken {
@@ -66,71 +58,59 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// ============================================
-// User Profile (Optional Extended Info)
-// ============================================
-
 model UserProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName       String?
-  lastName        String?
-  phoneNumber     String?
-  emailAddress    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  firstName    String?
+  lastName     String?
+  phoneNumber  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  emailAddress String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserSettings {
-  id                    String      @id @default(cuid())
-  userId                String      @unique
-  prefersDarkMode       Boolean     @default(false)
-  languagePref          String?     @default("JavaScript")
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  prefersDarkMode Boolean @default(false)
+  languagePref    String? @default("JavaScript")
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ============================================
-// Resume Scanner Feature
-// ============================================
-
 model ResumeAnalysis {
   id             String   @id @default(cuid())
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resumeName     String
   jobDescription String?
   atsScore       Int?
   matchScore     Float?
   feedback       Json
   analyzedAt     DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ============================================
-// Interview Features (Behavioral & Technical)
-// ============================================
-
 model InterviewSession {
-  id            String              @id @default(cuid())
-  userId        String
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          InterviewType
-  status        SessionStatus       @default(IN_PROGRESS)
-  startedAt     DateTime            @default(now())
-  completedAt   DateTime?
-  overallScore  Float?
-  feedback      Json?
-  responses     InterviewResponse[]
-
-  question1Id   String?                // reference TechnicalQuestion.id
-  question2Id   String?                // reference TechnicalQuestion.id
-  resumedAt     DateTime?              // Session timer; when was last resumed
-  pausedAt      DateTime?              // null = running
+  id                      String                    @id @default(cuid())
+  userId                  String
+  type                    InterviewType
+  status                  SessionStatus             @default(IN_PROGRESS)
+  startedAt               DateTime                  @default(now())
+  completedAt             DateTime?
+  overallScore            Float?
+  feedback                Json?
+  pausedAt                DateTime?
+  prompt                  String?
+  question1Id             String?
+  question2Id             String?
+  resumedAt               DateTime?
+  responses               InterviewResponse[]
+  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  StoredBehavioralSession StoredBehavioralSession[]
 
   @@index([userId])
 }
@@ -138,58 +118,65 @@ model InterviewSession {
 model InterviewResponse {
   id         String           @id @default(cuid())
   sessionId  String
-  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question   String
   answer     String
   score      Float?
   feedback   String?
   answeredAt DateTime         @default(now())
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
 }
 
 model TechnicalQuestion {
-  id           String   @id
-  slug         String   @unique // ex: problem name in url "3sum"
-  title        String           // ex: 9. 3Sum
-  description  String   @db.Text
+  id           String     @id
   difficulty   String
   category     String
-  starterCode  Json
-  functionName String           //ex: string("twoSum")
-  params       Json
+  createdAt    DateTime   @default(now())
+  description  String
+  functionName String
   outputType   String
-  createdAt    DateTime @default(now())
-
+  params       Json
+  slug         String     @unique
+  starterCode  Json
+  title        String
   testCases    TestCase[]
 }
 
 model TestCase {
-  id             String   @id @default(cuid())
-  input          Json     //Input params.. ex: {"nums": [2, 7, 11, 15]}
+  id             String            @id @default(cuid())
+  input          Json
   expectedOutput String
-  isHidden       Boolean  @default(false)
-
-  //Foreign Key
+  isHidden       Boolean           @default(false)
   problemId      String
   problem        TechnicalQuestion @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }
 
 model InterviewReport {
-  id            String      @id @default(cuid())
-  userId        String
-  sessionId     String
-  summary       String
-  isFavorite    Boolean     @default(false)
-  createdAt     DateTime    @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  sessionId  String
+  summary    String
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([sessionId])
 }
 
-// ============================================
-// Enums
-// ============================================
+model BehavioralPrompt {
+  id     String @id
+  prompt String
+}
+
+model StoredBehavioralSession {
+  id               String           @id
+  sessionId        String
+  transcript       String?
+  videoURL         String?
+  feedback         Json?
+  InterviewSession InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
 
 enum InterviewType {
   BEHAVIORAL
