@@ -1,7 +1,8 @@
 ﻿//Author: Brandon Christian
 //Date: 12/12/2025
 
-//TODO: Lockout upload buttons while uploading
+//Built out by: Dylan Hartley
+//Date: 01/20/2026 - End of Semester 
 
 "use client";
 import { useState } from "react";
@@ -11,6 +12,7 @@ import { OnUploadResumeClicked, OnAddJobDescriptionClicked } from "./uploadResum
 import type { FeedbackItem } from "./feedbackItem"
 import { FeedbackCategory } from "./feedbackItem"
 import { JobDescriptionTemplate, JOB_DESCRIPTION_TEMPLATES, JOB_DESCRIPTION_LABELS } from "./jobDescriptionTemplates"
+import { AiOptimizerTab } from "./AiOptimizerTab"
 
 function OnFailedUpload() {
     //Used for failed upload of resume and job description
@@ -553,15 +555,11 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
                     )}
 
                     {activeTab === "optimizer" && (
-                        <div className="max-w-3xl mx-auto">
-                            <div className="flex items-center gap-3 mb-5">
-                                <span className="text-xs px-2 py-0.5 rounded font-semibold tracking-wide bg-orange-500 text-white">COMING SOON</span>
-                                <p className="text-gray-500 text-sm m-0">AI-powered resume optimization will be available here. Your resume is shown below for preview.</p>
-                            </div>
-                            <div className="text-gray-800 text-sm leading-7 whitespace-pre-wrap font-mono bg-gray-50 border border-gray-200 rounded-lg p-5">
-                                {resumeText || <span className="text-gray-400 italic">No resume text available.</span>}
-                            </div>
-                        </div>
+                        <AiOptimizerTab
+                            resumeText={resumeText}
+                            feedbackItems={data}
+                            jobDescription={jobDescription}
+                        />
                     )}
 
                 </div>
