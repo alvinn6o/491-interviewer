@@ -27,8 +27,13 @@ next-env.d.ts
 # misc
 .DS_Store
 *.pem
+# AI workspace files
 .claude
 CLAUDE.md
+.claude/
+.codex
+.codex/
+tasks.md
 
 # debug
 npm-debug.log*

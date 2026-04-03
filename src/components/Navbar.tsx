@@ -41,6 +41,7 @@ export default function Navbar() {
     { href: "/resume", label: "Resume Scanner" },
     { href: "/interview/behavioral", label: "Behavioral" },
     { href: "/technical", label: "Technical" },
+    { href: "/jobs", label: "Job Tracker" },
     { href: "/history", label: "History" },
   ];
 
