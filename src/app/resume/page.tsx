@@ -1,19 +1,28 @@
-﻿//Author: Brandon Christian
+//Author: Brandon Christian
 //Date: 12/12/2025
 
 //TODO: Lockout upload buttons while uploading
 
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import { OnUploadResumeClicked, OnAddJobDescriptionClicked } from "./uploadResume"
 import type { FeedbackItem } from "./feedbackItem"
 import { FeedbackCategory } from "./feedbackItem"
 import { JobDescriptionTemplate, JOB_DESCRIPTION_TEMPLATES, JOB_DESCRIPTION_LABELS } from "./jobDescriptionTemplates"
+import type { OptimizeSuggestion, OptimizeResponse } from "~/app/api/resume/optimize/route"
+import {
+    DASHBOARD_SECTIONS,
+    buildHighlightedSegments,
+    DonutChart,
+    CategoryBar,
+    ReportSection,
+    HighlightedResumeText,
+} from "./resumeCharts"
+import { fetchOptimizations } from "./optimizerService"
 
 function OnFailedUpload() {
-    //Used for failed upload of resume and job description
     console.log("Failed Upload");
 }
 
@@ -43,17 +52,13 @@ export default function ResumeUpload() {
 enum UploadPageState {
     UPLOAD,
     ADD_JOB_DESC,
-    FEEDBACK    
+    FEEDBACK
 }
 
 function ViewSwitcher() {
 
-    /*switch page state between upload resume, job desc, and feedback (results)
-    also pass data between these states*/
-
     const [uploadState, setUploadState] = useState(UploadPageState.UPLOAD);
 
-    //Helps set useState typing
     const test_items = [
         { key: FeedbackCategory.NONE, name: "Item 1", description: "Lorem Ipsum 1", status: true }
     ];
@@ -94,10 +99,10 @@ function Instructions() {
             <NumberCircle number="1" description="Upload Resume" />
 
             <span className={`${styles.centered_column}`}>
-                <h1>→</h1> 
-                <div></div> 
+                <h1>→</h1>
+                <div></div>
             </span>
-            
+
             <NumberCircle number="2" description="Add Job Description" />
             <span className={`${styles.centered_column}`}>
                 <h1>→</h1>
@@ -120,20 +125,17 @@ function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
 
     const UploadResumeButton = async () => {
         try {
-            //Try and Wait For Upload
             setLoading(true);
 
             const result = await OnUploadResumeClicked();
 
             setLoading(false);
 
-            //catch error
             if (!result.success) {
                 setValid(false);
                 return;
             }
 
-            //Disallow empty
             if (result.extractedText == "") {
                 setEmpty(true);
                 return;
@@ -143,7 +145,6 @@ function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
             changeResumeText(result.extractedText);
             changeResumeFileName(result.fileName);
 
-            //Change state if successful
             changeState(UploadPageState.ADD_JOB_DESC);
         } catch (error: any) {
             console.log(error);
@@ -197,7 +198,6 @@ function AddJobDescriptionBox(
 
     const AddJobDescButton = async () => {
         try {
-            //Disallow empty
             if (template == "") {
                 setEmpty(true);
                 return;
@@ -205,12 +205,10 @@ function AddJobDescriptionBox(
 
             setLoading(true);
 
-            //Wait For Upload
             const result = await OnAddJobDescriptionClicked(resumeText, template, resumeFileName);
 
             setLoading(false);
 
-            //Change state if successful
             changeJobDescription(template);
             changeState(UploadPageState.FEEDBACK);
             changeFeedbackData(result);
@@ -269,188 +267,7 @@ function AddJobDescriptionBox(
     );
 }
 
-// ─── Dashboard config ────────────────────────────────────────────────────────
-
-type BadgeColor = "orange" | "blue" | "gray";
-
-const DASHBOARD_SECTIONS: {
-    key: FeedbackCategory;
-    label: string;
-    badge: string;
-    badgeColor: BadgeColor;
-    description: string;
-    placeholder: string;
-}[] = [
-    {
-        key: FeedbackCategory.ATS_SCORE,
-        label: "Searchability",
-        badge: "IMPORTANT",
-        badgeColor: "orange",
-        description: "An ATS (Applicant Tracking System) is used by most companies to filter resumes before a recruiter sees them. Fix red items to improve how well your resume is parsed.",
-        placeholder: "No ATS data available.",
-    },
-    {
-        key: FeedbackCategory.SKILLS_MATCH,
-        label: "Technical Skills",
-        badge: "HIGH SCORE IMPACT",
-        badgeColor: "blue",
-        description: "Hard skills and tools extracted from the job description. These directly impact your ATS score — match as many as possible.",
-        placeholder: "No technical skills data available.",
-    },
-    {
-        key: FeedbackCategory.BEHAVIORAL_SKILLS,
-        label: "Behavioral Skills",
-        badge: "MEDIUM SCORE IMPACT",
-        badgeColor: "gray",
-        description: "Soft skills and behavioral traits mentioned in the job description. These are secondary to technical skills but contribute to your overall match.",
-        placeholder: "No behavioral skills data available.",
-    },
-    {
-        key: FeedbackCategory.RECRUITER_TIPS,
-        label: "Recruiter Tips",
-        badge: "IMPORTANT",
-        badgeColor: "orange",
-        description: "Actionable advice to make your resume stand out to recruiters and hiring managers.",
-        placeholder: "No recruiter tips available.",
-    },
-    {
-        key: FeedbackCategory.FORMATTING,
-        label: "Formatting",
-        badge: "MEDIUM SCORE IMPACT",
-        badgeColor: "gray",
-        description: "Formatting checks ensure your resume is clean, readable, and ATS-compatible.",
-        placeholder: "Formatting analysis coming soon.",
-    },
-];
-
-const BADGE_STYLES: Record<BadgeColor, string> = {
-    orange: "bg-orange-500 text-white",
-    blue: "bg-blue-600 text-white",
-    gray: "bg-zinc-600 text-zinc-300",
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-type Segment = { text: string; color: "green" | "red" | null };
-
-function buildHighlightedSegments(text: string, keywords: FeedbackItem[]): Segment[] {
-    let segments: Segment[] = [{ text, color: null }];
-
-    for (const kw of keywords) {
-        const color = kw.status ? "green" : "red";
-        const escaped = kw.name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const regex = new RegExp(`(?<![\\w])${escaped}(?![\\w])`, "gi");
-        const next: Segment[] = [];
-
-        for (const seg of segments) {
-            if (seg.color !== null) { next.push(seg); continue; }
-
-            let last = 0;
-            let match: RegExpExecArray | null;
-            regex.lastIndex = 0;
-
-            while ((match = regex.exec(seg.text)) !== null) {
-                if (match.index > last) next.push({ text: seg.text.slice(last, match.index), color: null });
-                next.push({ text: match[0], color });
-                last = regex.lastIndex;
-            }
-            if (last < seg.text.length) next.push({ text: seg.text.slice(last), color: null });
-        }
-
-        segments = next;
-    }
-
-    return segments;
-}
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function DonutChart({ score }: { score: number }) {
-    const r = 44;
-    const cx = 60;
-    const cy = 60;
-    const circumference = 2 * Math.PI * r;
-    const offset = circumference * (1 - Math.min(score, 100) / 100);
-    const color = score >= 70 ? "#22c55e" : score >= 50 ? "#f97316" : "#ef4444";
-
-    return (
-        <svg width="130" height="130" viewBox="0 0 120 120">
-            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#e5e7eb" strokeWidth="12" />
-            <circle
-                cx={cx} cy={cy} r={r}
-                fill="none"
-                stroke={color}
-                strokeWidth="12"
-                strokeDasharray={circumference}
-                strokeDashoffset={offset}
-                strokeLinecap="round"
-                transform={`rotate(-90 ${cx} ${cy})`}
-                style={{ transition: "stroke-dashoffset 0.6s ease" }}
-            />
-            <text x={cx} y={cy - 7} textAnchor="middle" fill="#111827" fontSize="20" fontWeight="bold">{score}%</text>
-            <text x={cx} y={cy + 12} textAnchor="middle" fill="#6b7280" fontSize="9">Match Score</text>
-        </svg>
-    );
-}
-
-function CategoryBar({ label, items }: { label: string; items: FeedbackItem[] }) {
-    const total = items.length;
-    const passing = items.filter(i => i.status).length;
-    const failing = total - passing;
-    const pct = total === 0 ? 100 : Math.round((passing / total) * 100);
-    const barColor = pct === 100 ? "#22c55e" : pct >= 60 ? "#f97316" : "#ef4444";
-
-    return (
-        <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center">
-                <span className="text-gray-700 text-sm">{label}</span>
-                {total === 0
-                    ? <span className="text-gray-400 text-xs">—</span>
-                    : failing > 0
-                        ? <span className="text-red-500 text-xs">{failing} to fix</span>
-                        : <span className="text-green-600 text-xs">All clear</span>
-                }
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: barColor, transition: "width 0.5s ease" }} />
-            </div>
-        </div>
-    );
-}
-
-function ReportSection({ label, badge, badgeColor, description, items, placeholder }: {
-    label: string;
-    badge: string;
-    badgeColor: BadgeColor;
-    description: string;
-    items: FeedbackItem[];
-    placeholder: string;
-}) {
-    return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="flex items-center gap-3 px-5 py-4 bg-gray-50 border-b border-gray-200">
-                <h3 className="text-gray-900 m-0">{label}</h3>
-                <span className={`text-xs px-2 py-0.5 rounded font-semibold tracking-wide ${BADGE_STYLES[badgeColor]}`}>{badge}</span>
-            </div>
-            <p className="text-gray-500 text-sm px-5 py-3 border-b border-gray-200 m-0">{description}</p>
-            {items.length === 0 ? (
-                <p className="px-5 py-4 text-gray-400 text-sm italic m-0">{placeholder}</p>
-            ) : (
-                <div className="divide-y divide-gray-100">
-                    {items.map((item, i) => (
-                        <div key={i} className="grid grid-cols-[minmax(120px,1fr)_36px_3fr] gap-3 px-5 py-3 items-start">
-                            <span className="text-gray-800 text-sm font-medium">{item.name}</span>
-                            <span className="text-center text-base leading-none pt-0.5">{item.status ? "✅" : "❌"}</span>
-                            <span className="text-gray-500 text-sm">{item.description}</span>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Main feedback view ───────────────────────────────────────────────────────
 
 function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
     changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
@@ -459,6 +276,24 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
     resumeText: string;
 }) {
     const [activeTab, setActiveTab] = useState<"report" | "jobdesc" | "optimizer">("report");
+
+    // ── Optimizer state ──────────────────────────────────────────────────────
+    const [optimizerResult, setOptimizerResult] = useState<OptimizeResponse | null>(null);
+    const [optimizerLoading, setOptimizerLoading] = useState(false);
+    const [optimizerError, setOptimizerError] = useState<string | null>(null);
+
+    const runOptimizer = useCallback(async () => {
+        setOptimizerLoading(true);
+        setOptimizerError(null);
+        try {
+            const result = await fetchOptimizations(resumeText, jobDescription, data);
+            setOptimizerResult(result);
+        } catch (err: any) {
+            setOptimizerError(err.message ?? "Failed to reach the optimization service.");
+        } finally {
+            setOptimizerLoading(false);
+        }
+    }, [data, resumeText, jobDescription]);
 
     const scoreStr = data.find(i => i.key === FeedbackCategory.MATCH_SCORE)?.description ?? "0%";
     const score = parseInt(scoreStr.match(/^(\d+)/)?.[1] ?? "0");
@@ -469,7 +304,7 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
     const tabs: { key: "report" | "jobdesc" | "optimizer"; label: string }[] = [
         { key: "report", label: "Resume Report" },
         { key: "jobdesc", label: "Job Description" },
-        { key: "optimizer", label: "AI Optimizer" },
+        { key: "optimizer", label: "Resume Optimizer" },
     ];
 
     return (
@@ -514,7 +349,7 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
                 </div>
 
                 {/* Tab content */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className={`flex-1 min-h-0 ${activeTab === "optimizer" ? "flex p-4" : "overflow-y-auto p-6"}`}>
 
                     {activeTab === "report" && (
                         <div className="flex flex-col gap-5">
@@ -553,14 +388,121 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
                     )}
 
                     {activeTab === "optimizer" && (
-                        <div className="max-w-3xl mx-auto">
-                            <div className="flex items-center gap-3 mb-5">
-                                <span className="text-xs px-2 py-0.5 rounded font-semibold tracking-wide bg-orange-500 text-white">COMING SOON</span>
-                                <p className="text-gray-500 text-sm m-0">AI-powered resume optimization will be available here. Your resume is shown below for preview.</p>
+                        <div className="flex gap-4 flex-1 min-h-0 w-full">
+
+                            {/* Left — Resume with highlights */}
+                            <div className="flex flex-col flex-1 min-w-0 border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center flex-shrink-0">
+                                    <h4 className="text-gray-800 m-0 text-sm font-semibold">Your Resume</h4>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 text-gray-800 text-xs leading-6 whitespace-pre-wrap font-mono bg-white">
+                                    <HighlightedResumeText
+                                        text={resumeText}
+                                        highlights={optimizerResult
+                                            ? optimizerResult.suggestions
+                                                .filter(s => !!s.originalText)
+                                                .map(s => s.originalText)
+                                            : []
+                                        }
+                                    />
+                                </div>
                             </div>
-                            <div className="text-gray-800 text-sm leading-7 whitespace-pre-wrap font-mono bg-gray-50 border border-gray-200 rounded-lg p-5">
-                                {resumeText || <span className="text-gray-400 italic">No resume text available.</span>}
+
+                            {/* Right — Suggestions */}
+                            <div className="flex flex-col w-96 flex-shrink-0 border border-gray-200 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+                                    <h4 className="text-gray-800 m-0 text-sm font-semibold">Resume Suggestions</h4>
+                                    {optimizerResult && !optimizerLoading && (
+                                        <button className="orange_button text-xs py-1 px-3" onClick={runOptimizer}>Re-run</button>
+                                    )}
+                                </div>
+                                <div className="flex-1 overflow-y-auto">
+
+                                    {/* Pre-run */}
+                                    {!optimizerResult && !optimizerLoading && !optimizerError && (
+                                        <div className="flex flex-col items-center gap-4 p-8 text-center">
+                                            <span className="text-4xl">✨</span>
+                                            <div>
+                                                <p className="text-gray-700 text-sm font-medium m-0 mb-1">Resume Optimizer</p>
+                                                <p className="text-gray-400 text-xs m-0">Lines to improve will be highlighted red in your resume.</p>
+                                            </div>
+                                            <button className="orange_button" onClick={runOptimizer}>Optimize Resume</button>
+                                        </div>
+                                    )}
+
+                                    {/* Loading */}
+                                    {optimizerLoading && (
+                                        <div className="flex flex-col items-center gap-3 p-8">
+                                            <div className="w-8 h-8 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+                                            <p className="text-gray-500 text-sm m-0 text-center">Running analysis...</p>
+                                        </div>
+                                    )}
+
+                                    {/* Error */}
+                                    {optimizerError && !optimizerLoading && (
+                                        <div className="m-4 border border-red-200 rounded-lg p-3 bg-red-50 text-red-700 text-sm">
+                                            {optimizerError}
+                                        </div>
+                                    )}
+
+                                    {/* Results */}
+                                    {optimizerResult && !optimizerLoading && (
+                                        <div className="flex flex-col">
+
+                                            {/* Summary */}
+                                            {optimizerResult.summary && (
+                                                <div className="mx-4 mt-4 border border-blue-200 rounded-lg overflow-hidden">
+                                                    <div className="px-4 py-2 bg-blue-600 flex items-center gap-2">
+                                                        <span className="text-xs font-semibold text-white uppercase tracking-wide">Overview</span>
+                                                    </div>
+                                                    <div className="px-4 py-3 bg-blue-50">
+                                                        <p className="text-gray-700 text-xs m-0 leading-relaxed">{optimizerResult.summary}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Cards */}
+                                            <div className="flex flex-col gap-4 p-4">
+                                                {optimizerResult.suggestions
+                                                    .filter(s => (s.originalText || s.suggestion) && s.originalText !== s.replacementText)
+                                                    .map((s: OptimizeSuggestion, i: number) => (
+                                                        <div key={i} className="flex flex-col border border-gray-200 rounded-lg overflow-hidden">
+
+                                                            {/* Card header */}
+                                                            <div className="flex items-start px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                                                                <div className="flex flex-col gap-0.5 min-w-0">
+                                                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-gray-200 text-gray-600 uppercase tracking-wide self-start">{s.section}</span>
+                                                                    <span className="text-gray-700 text-xs font-medium leading-5">{s.issue}</span>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Current → Suggested */}
+                                                            {s.originalText ? (
+                                                                <div className="divide-y divide-gray-100">
+                                                                    <div className="px-4 py-2 bg-red-50">
+                                                                        <p className="text-xs text-red-400 font-semibold uppercase tracking-wide m-0 mb-1">Current</p>
+                                                                        <p className="text-xs text-red-700 font-mono m-0 leading-5">{s.originalText}</p>
+                                                                    </div>
+                                                                    <div className="px-4 py-2 bg-green-50">
+                                                                        <p className="text-xs text-green-500 font-semibold uppercase tracking-wide m-0 mb-1">Suggested</p>
+                                                                        <p className="text-xs text-green-800 font-mono m-0 leading-5">{s.replacementText}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="px-4 py-2">
+                                                                    <p className="text-xs text-gray-600 m-0 leading-relaxed">{s.suggestion}</p>
+                                                                </div>
+                                                            )}
+
+                                                        </div>
+                                                    ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                </div>
                             </div>
+
                         </div>
                     )}
 
@@ -569,4 +511,3 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
         </div>
     );
 }
-
