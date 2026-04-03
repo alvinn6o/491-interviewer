@@ -8,6 +8,7 @@ import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_component
 import { useInterviewSession } from "./useInterviewSession";
 import type { TestResult } from "~/lib/testHarness";
 import type { QuestionSummary } from "~/app/api/questions/route";
+type SolutionsMap = Record<string, Record<string, string>>;
 
 /* Page States */
 enum TIPageState {
@@ -35,6 +36,9 @@ export default function TechnicalInterviewViewSwitcher() {
   const [isRunning, setIsRunning] = useState(false);
   const [questionStatus, setQuestionStatus] = useState<boolean[]>([]);
 
+  const [solutions, setSolutions] = useState<SolutionsMap>({});
+  const [rightTab, setRightTab] = useState<"results" | "solution">("results");
+
   // Called by the hook when the 60-minute timer hits zero
   function handleTimeExpired() {
     setPageState(TIPageState.END);
@@ -43,7 +47,7 @@ export default function TechnicalInterviewViewSwitcher() {
   const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
     useInterviewSession(handleTimeExpired);
 
-  // Fetch questions from JSON-backed API on mount, initialize starter code
+  // Fetch questions and solutions from JSON-backed APIs on mount
   useEffect(() => {
     fetch("/api/questions")
       .then((r) => r.json())
@@ -55,6 +59,15 @@ export default function TechnicalInterviewViewSwitcher() {
         }
       })
       .catch(console.error);
+
+      //Alvin Ngo work report 3
+    fetch("/api/solutions")
+      .then((r) => {
+        if (!r.ok) throw new Error(`/api/solutions returned ${r.status}`);
+        return r.json();
+      })
+      .then((data: SolutionsMap) => setSolutions(data))
+      .catch((e) => console.error("Failed to load solutions:", e));
   }, []);
 
   /* Helpers */
@@ -227,47 +240,43 @@ export default function TechnicalInterviewViewSwitcher() {
 
     case TIPageState.ACTIVE:
       return (
-        <main className="min-h-screen px-6 py-10">
-          {/* Header with back button and timer */}
-          <div className="flex justify-between max-w-4xl mx-auto items-center">
-            <button
-              onClick={backToQuestions}
-              className="text-sm text-blue-600 underline"
-            >
-              ← Back to questions
-            </button>
-            <div className="flex flex-col items-end gap-1">
-              <span className="font-semibold">Time Remaining: {formatTime(timeLeft)}</span>
-              <SessionBadge />
+        <main className="h-screen flex flex-col overflow-hidden px-4">
+          {/* Header */}
+          <div className="flex items-center justify-between py-2 shrink-0">
+            <div className="flex items-center gap-4">
+              <button onClick={backToQuestions} className="text-sm text-blue-600 underline">
+                ← Back
+              </button>
+              <button
+                onClick={finishEarly}
+                disabled={!questionStatus.some(Boolean)}
+                className={
+                  questionStatus.some(Boolean)
+                    ? "text-sm underline text-red-600"
+                    : "text-sm underline text-gray-400 cursor-not-allowed"
+                }
+              >
+                Finish Early
+              </button>
             </div>
-          </div>
-
-          <div className="max-w-4xl mx-auto mt-2">
-            <button
-              onClick={finishEarly}
-              disabled={!questionStatus.some(Boolean)}
-              className={
-                questionStatus.some(Boolean)
-                  ? "text-sm underline text-red-600"
-                  : "text-sm underline text-gray-400 cursor-not-allowed"
-              }
-            >
-              Finish Test Early
-            </button>
+            <div className="flex items-center gap-3">
+              <SessionBadge />
+              <span className="font-semibold text-sm">Time Remaining: {formatTime(timeLeft)}</span>
+            </div>
           </div>
 
           {/* Pause banner */}
           {session.status === "paused" && (
-            <div className="max-w-4xl mx-auto mt-4 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded text-sm text-center">
+            <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-2 rounded text-sm text-center shrink-0">
               Timer paused — your session will resume when you return to this tab.
             </div>
           )}
 
-          {/* Question title and difficulty */}
+          {/* Question */}
           {currentQuestion && (
-            <div className="max-w-4xl mx-auto border rounded p-4 mt-6">
-              <div className="flex items-center mb-2">
-                <h2 className="font-semibold text-lg">{currentQuestion.title}</h2>
+            <div className="border rounded p-3 mt-2 overflow-y-auto max-h-[22vh] shrink-0">
+              <div className="flex items-center mb-1">
+                <h2 className="font-semibold text-base">{currentQuestion.title}</h2>
                 <DifficultyBadge difficulty={currentQuestion.difficulty} />
               </div>
               <p className="text-sm text-gray-700 whitespace-pre-wrap">
@@ -276,21 +285,14 @@ export default function TechnicalInterviewViewSwitcher() {
             </div>
           )}
 
-          {/* Code editor and output panel */}
-          <div className="max-w-4xl mx-auto grid grid-cols-2 gap-6 mt-6">
-            <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2 text-base">Code</h3>
-              <CodeEditor
-                language={language}
-                value={code}
-                onChange={setCode}
-                onLanguageChange={handleLanguageChange}
-                height="600px"
-              />
+          {/* Code editor — takes remaining vertical space */}
+          <div className="border rounded p-3 mt-2 flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <h3 className="font-semibold text-sm">Code</h3>
               <button
                 onClick={runCode}
                 disabled={isRunning}
-                className={`mt-3 px-4 py-1 rounded text-white ${
+                className={`px-4 py-1 rounded text-white text-sm ${
                   isRunning
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-orange-500 hover:bg-orange-600"
@@ -299,64 +301,115 @@ export default function TechnicalInterviewViewSwitcher() {
                 {isRunning ? "Running..." : "Run Code"}
               </button>
             </div>
-
-            {/* Test case results */}
-            <div className="border rounded p-5 overflow-auto max-h-[720px]">
-              <h3 className="font-semibold mb-3 text-base">Test Results</h3>
-
-              {compileOutput && (
-                <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-4 whitespace-pre-wrap">
-                  Compile Error:{"\n"}{compileOutput}
-                </pre>
-              )}
-              {stderr && !compileOutput && (
-                <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-4 whitespace-pre-wrap">
-                  {stderr}
-                </pre>
-              )}
-
-              {testResults.length === 0 && !compileOutput && !stderr && (
-                <p className="text-gray-400">Run your code to see test results</p>
-              )}
-
-              {testResults.map((r) => (
-                <div
-                  key={r.case}
-                  className={`mb-4 p-4 rounded border ${
-                    r.passed ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-base">
-                      Case {r.case}{r.isHidden ? " (hidden)" : ""}
-                    </span>
-                    <span className={`font-semibold text-base ${r.passed ? "text-green-600" : "text-red-600"}`}>
-                      {r.passed ? "Passed ✓" : "Failed ✗"}
-                    </span>
-                  </div>
-                  {r.error ? (
-                    <p className="text-red-700 text-sm">{r.error}</p>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-700 mt-1">
-                        Expected: <code className="bg-white px-1 py-0.5 rounded border text-sm">{r.expected}</code>
-                      </p>
-                      {!r.passed && (
-                        <p className="text-sm text-gray-700 mt-1">
-                          Got: <code className="bg-white px-1 py-0.5 rounded border text-sm">{r.actual}</code>
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
-
-              {testResults.length > 0 && (
-                <p className="text-base font-semibold mt-2">
-                  {testResults.filter((r) => r.passed).length} / {testResults.length} passed
-                </p>
-              )}
+            <div className="flex-1 min-h-0">
+              <CodeEditor
+                language={language}
+                value={code}
+                onChange={setCode}
+                onLanguageChange={handleLanguageChange}
+                height="100%"
+              />
             </div>
+          </div>
+
+          {/* Bottom panel: Test Results / Solution tabs */}
+          <div className="border rounded mt-2 mb-2 flex flex-col shrink-0 h-[28vh]">
+            {/* Tab bar */}
+            <div className="flex border-b shrink-0">
+              <button
+                onClick={() => setRightTab("results")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  rightTab === "results"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Test Results
+              </button>
+              <button
+                onClick={() => setRightTab("solution")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  rightTab === "solution"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Solution
+              </button>
+            </div>
+
+            {/* Test Results tab */}
+            {rightTab === "results" && (
+              <div className="p-4 overflow-y-auto flex-1">
+                {compileOutput && (
+                  <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-3 whitespace-pre-wrap">
+                    Compile Error:{"\n"}{compileOutput}
+                  </pre>
+                )}
+                {stderr && !compileOutput && (
+                  <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-3 whitespace-pre-wrap">
+                    {stderr}
+                  </pre>
+                )}
+                {testResults.length === 0 && !compileOutput && !stderr && (
+                  <p className="text-gray-400 text-sm">Run your code to see test results</p>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  {testResults.map((r) => (
+                    <div
+                      key={r.case}
+                      className={`p-3 rounded border text-sm min-w-[180px] ${
+                        r.passed ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold">
+                          Case {r.case}{r.isHidden ? " (hidden)" : ""}
+                        </span>
+                        <span className={`font-semibold ${r.passed ? "text-green-600" : "text-red-600"}`}>
+                          {r.passed ? "✓" : "✗"}
+                        </span>
+                      </div>
+                      {r.error ? (
+                        <p className="text-red-700 text-xs">{r.error}</p>
+                      ) : (
+                        <>
+                          <p className="text-gray-700 text-xs">
+                            Expected: <code className="bg-white px-1 rounded border">{r.expected}</code>
+                          </p>
+                          {!r.passed && (
+                            <p className="text-gray-700 text-xs mt-0.5">
+                              Got: <code className="bg-white px-1 rounded border">{r.actual}</code>
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {testResults.length > 0 && (
+                  <p className="text-sm font-semibold mt-3">
+                    {testResults.filter((r) => r.passed).length} / {testResults.length} passed
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Solution tab */}
+            {rightTab === "solution" && (
+              <div className="p-4 overflow-y-auto flex-1">
+                {currentQuestion && solutions[currentQuestion.id]?.python ? (
+                  <>
+                    <p className="text-xs text-gray-400 mb-2">Python reference solution</p>
+                    <pre className="bg-gray-900 text-gray-100 text-xs p-3 rounded overflow-auto whitespace-pre font-mono leading-relaxed h-full">
+                      {solutions[currentQuestion.id]!.python}
+                    </pre>
+                  </>
+                ) : (
+                  <p className="text-gray-400 text-sm">No solution available for this question.</p>
+                )}
+              </div>
+            )}
           </div>
         </main>
       );
