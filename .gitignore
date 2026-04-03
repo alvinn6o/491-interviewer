@@ -29,6 +29,7 @@ next-env.d.ts
 *.pem
 # AI workspace files
 .claude
+CLAUDE.md
 .claude/
 .codex
 .codex/
