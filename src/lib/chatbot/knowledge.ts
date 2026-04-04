@@ -1,3 +1,5 @@
+//Alexander Tu
+
 export const APP_KNOWLEDGE = {
   appName: "SkillSift",
   about:[
@@ -36,6 +38,13 @@ export const APP_KNOWLEDGE = {
       steps: [
         "Open Session History from the Account sidebar or Navigation Bar at the top.",
         "You will see past interview sessions with dates and scores (if available).",
+      ],
+    },
+    resumeAnalysis: {
+      title: "Analyze resume",
+      steps: [
+        "Navigate to the Resume Scanner",
+        "After uploading your resume, get the detailed analysis with ATS scoring",
       ],
     },
     // TODO: add more help topics as features are implemented, e.g. resume analysis, interview practice, etc.

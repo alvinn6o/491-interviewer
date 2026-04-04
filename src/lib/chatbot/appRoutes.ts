@@ -1,3 +1,5 @@
+//Alexander Tu
+
 export const APP_ROUTES = [
   { label: "Account Details", path: "/account/details", description: "View and edit account profile fields" },
   { label: "Privacy", path: "/account/privacy", description: "Privacy preferences and controls" },
