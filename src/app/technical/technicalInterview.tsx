@@ -8,6 +8,7 @@ import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_component
 import { useInterviewSession, type SessionResponse } from "./useInterviewSession";
 import type { TestResult } from "~/lib/testHarness";
 import type { QuestionSummary } from "~/app/api/questions/route";
+import DraggableNotepad from "./_components/DraggableNotepad";
 
 type SolutionsMap = Record<string, Record<string, string>>;
 
@@ -19,7 +20,11 @@ enum TIPageState {
 }
 
 /* View Switcher */
-export default function TechnicalInterviewViewSwitcher() {
+export default function TechnicalInterviewViewSwitcher({
+  resumeSessionId,
+}: {
+  resumeSessionId?: string;
+}) {
   const [pageState, setPageState] = useState<TIPageState>(TIPageState.START);
 
   // Fetch questions dynamically from API
@@ -48,7 +53,7 @@ export default function TechnicalInterviewViewSwitcher() {
     setPageState(TIPageState.END);
   }
 
-  const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
+  const { session, timeLeft, startSession, resumeSession, endSession, hydrateSession, formatTime } =
     useInterviewSession(handleTimeExpired);
 
   // Fetch questions and solutions from JSON-backed APIs on mount
@@ -96,6 +101,28 @@ export default function TechnicalInterviewViewSwitcher() {
 
   const currentQuestion = questions[currentQuestionIndex];
 
+  // If resumeSessionId is provided, load that existing session instead of creating new
+  useEffect(() => {
+    if (!resumeSessionId) {
+      return;
+    }
+
+    async function loadExistingSession() {
+      try {
+        const res = await fetch(`/api/interview/session/currentuser/${resumeSessionId}`);
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        hydrateSession(data.id, data.totalPausedMs ?? 0);
+      } catch (err) {
+        console.error("Failed to load existing session:", err);
+      }
+    }
+
+    void loadExistingSession();
+  }, [resumeSessionId]);
+
   function handleLanguageChange(newLang: SupportedLanguage) {
     setLanguage(newLang);
     if (currentQuestion) {
@@ -133,8 +160,11 @@ export default function TechnicalInterviewViewSwitcher() {
     }
 
     if (session.status === "idle") {
-      // First entry — create the session in the DB with both question IDs
-      await startSession(questions[0]!.id, questions[1]!.id);
+      if (resumeSessionId) {
+        await resumeSession();
+      } else {
+        await startSession(questions[0]!.id, questions[1]!.id);
+      }
     } else if (session.status === "paused") {
       await resumeSession();
     }
@@ -307,12 +337,7 @@ export default function TechnicalInterviewViewSwitcher() {
               </button>
               <button
                 onClick={() => void finishEarly()}
-                disabled={!questionStatus.some(Boolean)}
-                className={
-                  questionStatus.some(Boolean)
-                    ? "text-sm underline text-red-600"
-                    : "text-sm underline text-gray-400 cursor-not-allowed"
-                }
+                className="text-sm underline text-red-600"
               >
                 Finish Early
               </button>
@@ -469,6 +494,7 @@ export default function TechnicalInterviewViewSwitcher() {
               </div>
             )}
           </div>
+          <DraggableNotepad />
         </main>
       );
 

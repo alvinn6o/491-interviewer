@@ -23,10 +23,11 @@ type UseInterviewSessionReturn = {
   pauseSession: () => Promise<void>;
   resumeSession: () => Promise<void>;
   endSession: (responses: SessionResponse[]) => Promise<void>;
+  hydrateSession: (dbSessionId: string, totalPausedMs: number) => void;
   formatTime: (seconds: number) => string;
 };
 
-const INTERVIEW_DURATION_SECONDS = 60 * 60;
+const INTERVIEW_DURATION_SECONDS = 60 * 60; // 60 minutes
 
 export function useInterviewSession(
   onTimeExpired: () => void
@@ -225,10 +226,22 @@ export function useInterviewSession(
 
   // Complete the session and save responses to DB
   async function endSession(responses: SessionResponse[]) {
+    const sessionId = dbSessionIdRef.current;
     setSession((prev) => ({ ...prev, status: "ended" }));
-    if (dbSessionIdRef.current) {
-      await callApi(dbSessionIdRef.current, { action: "complete", responses });
+    if (sessionId) {
+      await callApi(sessionId, { action: "complete", responses });
     }
+  }
+
+  // Hydrate an existing session from the DB — used when resuming from history
+  function hydrateSession(dbSessionId: string, totalPausedMs: number) {
+    dbSessionIdRef.current = dbSessionId;
+    setSession({
+      dbSessionId,
+      startedAt: null,
+      status: "paused",
+      totalPausedMs,
+    });
   }
 
   // Format seconds as mm:ss
@@ -245,6 +258,7 @@ export function useInterviewSession(
     pauseSession,
     resumeSession,
     endSession,
+    hydrateSession,
     formatTime,
   };
 }

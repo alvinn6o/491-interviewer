@@ -6,6 +6,8 @@ import { auth } from "~/server/auth";
 import Link from "next/link";
 import { db } from "~/server/db";
 
+export const dynamic = "force-dynamic"
+
 export default async function HistoryPage() {
   const session = await auth();
 

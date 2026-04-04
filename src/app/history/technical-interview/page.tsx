@@ -6,6 +6,8 @@ import { auth } from "~/server/auth";
 import Link from "next/link";
 import { db } from "~/server/db";
 
+export const dynamic = "force-dynamic";
+
 export default async function TechnicalInterviewHistoryPage() {
   const session = await auth();
 
@@ -28,9 +30,10 @@ export default async function TechnicalInterviewHistoryPage() {
   });
 
   // Format milliseconds into a readable duration string
-  function formatDuration(startedAt: Date, completedAt: Date | null, totalPausedMs: number) {
+  function formatDuration(startedAt: Date, completedAt: Date | null, totalPausedMs: number | null) {
     const endTime = completedAt ? completedAt.getTime() : Date.now();
-    const activeMs = endTime - startedAt.getTime() - totalPausedMs;
+    const pausedMs = totalPausedMs ?? 0;
+    const activeMs = endTime - startedAt.getTime() - pausedMs;
     const totalSeconds = Math.floor(activeMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
@@ -158,4 +161,3 @@ export default async function TechnicalInterviewHistoryPage() {
     </main>
   );
 }
-
