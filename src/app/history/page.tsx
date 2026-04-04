@@ -4,12 +4,34 @@
 import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import Link from "next/link";
+import { db } from "~/server/db";
 
 export default async function HistoryPage() {
   const session = await auth();
 
   if (!session?.user) {
     redirect("/login");
+  }
+
+  // Fetch the most recent technical session
+  const latestTechnical = await db.interviewSession.findFirst({
+    where: {
+      userId: session.user.id,
+      type: "TECHNICAL",
+    },
+    orderBy: {
+      startedAt: "desc",
+    },
+  });
+
+  function formatDate(date: Date) {
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   }
 
   return (
@@ -62,16 +84,69 @@ export default async function HistoryPage() {
           </div>
           <hr className="-mx-6 mb-6 border-t-2 border-black" />
 
-          <div className="space-y-6 text-center text-gray-500">
-            <p className="text-sm">No technical interviews yet</p>
-            <p className="text-xs">Start a technical interview to see your results here!</p>
-            <Link
-              href="/technical"
-              className="inline-block rounded-full bg-orange-500 px-6 py-2 text-sm text-white hover:bg-orange-600"
-            >
-              Start Interview
-            </Link>
-          </div>
+          {latestTechnical ? (
+            // Show latest session info
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">
+                {formatDate(latestTechnical.startedAt)}
+              </p>
+
+              <div className="flex items-center gap-2">
+                {latestTechnical.status === "COMPLETED" && (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    Completed
+                  </span>
+                )}
+                {latestTechnical.status === "IN_PROGRESS" && (
+                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700">
+                    In Progress
+                  </span>
+                )}
+                {latestTechnical.status === "ABANDONED" && (
+                  <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                    Abandoned
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                {latestTechnical.status === "IN_PROGRESS" && (
+                  <Link
+                    href={"/technical?sessionId=" + latestTechnical.id}
+                    className="inline-block rounded-full bg-orange-500 px-4 py-2 text-xs text-white hover:bg-orange-600"
+                  >
+                    Resume Session
+                  </Link>
+                )}
+                {latestTechnical.status === "COMPLETED" && (
+                  <Link
+                    href={"/history/technical-interview/" + latestTechnical.id}
+                    className="inline-block rounded-full bg-gray-800 px-4 py-2 text-xs text-white hover:bg-gray-900"
+                  >
+                    View Results
+                  </Link>
+                )}
+                <Link
+                  href="/technical"
+                  className="inline-block rounded-full border border-orange-500 px-4 py-2 text-xs text-orange-500 hover:bg-orange-50"
+                >
+                  New Interview
+                </Link>
+              </div>
+            </div>
+          ) : (
+            // Empty state
+            <div className="space-y-6 text-center text-gray-500">
+              <p className="text-sm">No technical interviews yet</p>
+              <p className="text-xs">Start a technical interview to see your results here!</p>
+              <Link
+                href="/technical"
+                className="inline-block rounded-full bg-orange-500 px-6 py-2 text-sm text-white hover:bg-orange-600"
+              >
+                Start Interview
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Latest Behavioral Interview Card */}

@@ -5,9 +5,10 @@
 
 import { useEffect, useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
-import { useInterviewSession } from "./useInterviewSession";
+import { useInterviewSession, type SessionResponse } from "./useInterviewSession";
 import type { TestResult } from "~/lib/testHarness";
 import type { QuestionSummary } from "~/app/api/questions/route";
+
 type SolutionsMap = Record<string, Record<string, string>>;
 
 /* Page States */
@@ -39,6 +40,9 @@ export default function TechnicalInterviewViewSwitcher() {
   const [solutions, setSolutions] = useState<SolutionsMap>({});
   const [rightTab, setRightTab] = useState<"results" | "solution">("results");
 
+  // Store the code written per question so we can save it on finish
+  const [questionCode, setQuestionCode] = useState<string[]>([]);
+
   // Called by the hook when the 60-minute timer hits zero
   function handleTimeExpired() {
     setPageState(TIPageState.END);
@@ -54,6 +58,7 @@ export default function TechnicalInterviewViewSwitcher() {
       .then((data: QuestionSummary[]) => {
         setQuestions(data);
         setQuestionStatus(data.map(() => false));
+        setQuestionCode(data.map(() => ""));
         if (data[0]) {
           setCode(data[0].starterCode["python"] ?? getStarterCode("python"));
         }
@@ -70,7 +75,25 @@ export default function TechnicalInterviewViewSwitcher() {
       .catch((e) => console.error("Failed to load solutions:", e));
   }, []);
 
-  /* Helpers */
+  // Pause the session in the DB when the user navigates away from the page
+  useEffect(() => {
+    function handleBeforeUnload() {
+      if (session.status === "active" && session.dbSessionId) {
+        // sendBeacon is used here because regular fetch gets cancelled on page unload
+        navigator.sendBeacon(
+          `/api/interview/session/currentuser/${session.dbSessionId}`,
+          JSON.stringify({ action: "pause" })
+        );
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [session.status, session.dbSessionId]);
+
   const currentQuestion = questions[currentQuestionIndex];
 
   function handleLanguageChange(newLang: SupportedLanguage) {
@@ -80,31 +103,59 @@ export default function TechnicalInterviewViewSwitcher() {
     }
   }
 
+  // Save the current editor code into questionCode before navigating away
+  function saveCurrentCode() {
+    setQuestionCode((prev) => {
+      const updated = [...prev];
+      updated[currentQuestionIndex] = code;
+      return updated;
+    });
+  }
+
   // Start a specific question; kicks off or resumes the session
-  function startInterview(index: number) {
+  async function startInterview(index: number) {
     setCurrentQuestionIndex(index);
-    const q = questions[index];
-    if (q) setCode(q.starterCode[language] ?? getStarterCode(language));
     setTestResults([]);
     setCompileOutput("");
     setStderr("");
     setPageState(TIPageState.ACTIVE);
 
+    // Restore previously written code for this question if it exists
+    const selectedQuestion = questions[index];
+    if (selectedQuestion) {
+      const savedCode = questionCode[index];
+      if (savedCode) {
+        setCode(savedCode);
+      } else {
+        const starter = selectedQuestion.starterCode[language];
+        setCode(starter ?? getStarterCode(language));
+      }
+    }
+
     if (session.status === "idle") {
-      startSession();
+      // First entry — create the session in the DB with both question IDs
+      await startSession(questions[0]!.id, questions[1]!.id);
     } else if (session.status === "paused") {
-      resumeSession();
+      await resumeSession();
     }
   }
 
   // Finish the interview early
-  function finishEarly() {
-    endSession();
+  async function finishEarly() {
+    saveCurrentCode();
+
+    const responses: SessionResponse[] = questions.map((q, idx) => ({
+      question: q.title,
+      answer: questionCode[idx] ?? "",
+    }));
+
+    await endSession(responses);
     setPageState(TIPageState.END);
   }
 
   // Go back to question list; timer keeps running
   function backToQuestions() {
+    saveCurrentCode();
     setPageState(TIPageState.START);
   }
 
@@ -144,6 +195,13 @@ export default function TechnicalInterviewViewSwitcher() {
           return next;
         });
       }
+
+      // Save latest code on run
+      setQuestionCode((prev) => {
+        const updated = [...prev];
+        updated[currentQuestionIndex] = code;
+        return updated;
+      });
     } catch (error) {
       setStderr(error instanceof Error ? error.message : "Failed to execute");
     } finally {
@@ -227,7 +285,7 @@ export default function TechnicalInterviewViewSwitcher() {
                   )}
                 </span>
                 <button
-                  onClick={() => startInterview(index)}
+                  onClick={() => void startInterview(index)}
                   className="bg-orange-500 text-white px-4 py-1 rounded ml-4 shrink-0"
                 >
                   {session.status === "idle" ? "Start" : "Continue"}
@@ -248,7 +306,7 @@ export default function TechnicalInterviewViewSwitcher() {
                 ← Back
               </button>
               <button
-                onClick={finishEarly}
+                onClick={() => void finishEarly()}
                 disabled={!questionStatus.some(Boolean)}
                 className={
                   questionStatus.some(Boolean)
@@ -290,7 +348,7 @@ export default function TechnicalInterviewViewSwitcher() {
             <div className="flex items-center justify-between mb-2 shrink-0">
               <h3 className="font-semibold text-sm">Code</h3>
               <button
-                onClick={runCode}
+                onClick={() => void runCode()}
                 disabled={isRunning}
                 className={`px-4 py-1 rounded text-white text-sm ${
                   isRunning

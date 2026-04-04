@@ -4,8 +4,13 @@ import { useEffect, useRef, useState } from "react";
 
 export type SessionStatus = "idle" | "active" | "paused" | "ended";
 
+export type SessionResponse = {
+  question: string;
+  answer: string;
+};
+
 export type InterviewSession = {
-  sessionId: string;
+  dbSessionId: string | null;
   startedAt: Date | null;
   status: SessionStatus;
   totalPausedMs: number;
@@ -14,25 +19,21 @@ export type InterviewSession = {
 type UseInterviewSessionReturn = {
   session: InterviewSession;
   timeLeft: number;
-  startSession: () => void;
-  pauseSession: () => void;
-  resumeSession: () => void;
-  endSession: () => void;
+  startSession: (question1Id: string, question2Id: string) => Promise<void>;
+  pauseSession: () => Promise<void>;
+  resumeSession: () => Promise<void>;
+  endSession: (responses: SessionResponse[]) => Promise<void>;
   formatTime: (seconds: number) => string;
 };
 
 const INTERVIEW_DURATION_SECONDS = 60 * 60;
-
-function generateSessionId(): string {
-  return "session_" + Date.now() + "_" + Math.random().toString(36).slice(2, 9);
-}
 
 export function useInterviewSession(
   onTimeExpired: () => void
 ): UseInterviewSessionReturn {
 
   const [session, setSession] = useState<InterviewSession>({
-    sessionId: generateSessionId(),
+    dbSessionId: null,
     startedAt: null,
     status: "idle",
     totalPausedMs: 0,
@@ -40,14 +41,23 @@ export function useInterviewSession(
 
   const [timeLeft, setTimeLeft] = useState(INTERVIEW_DURATION_SECONDS);
 
+  // Track when the session was paused locally so we can accumulate paused time
   const pausedAtRef = useRef<number | null>(null);
 
+  // Refs so event listeners always read the latest values without stale closures
   const statusRef = useRef<SessionStatus>("idle");
+  const dbSessionIdRef = useRef<string | null>(null);
 
+  // Keep refs in sync with state
   useEffect(() => {
     statusRef.current = session.status;
   }, [session.status]);
 
+  useEffect(() => {
+    dbSessionIdRef.current = session.dbSessionId;
+  }, [session.dbSessionId]);
+
+  // Timer — only ticks when session is active
   useEffect(() => {
     if (session.status !== "active") {
       return;
@@ -68,15 +78,17 @@ export function useInterviewSession(
     return () => clearInterval(interval);
   }, [session.status, onTimeExpired]);
 
-  //Pause when user switches tabs or minimizes window
+  // Auto pause/resume when user switches tabs or windows
   useEffect(() => {
 
-    // Fires when the tab becomes hidden or visible
-    function handleVisibilityChange() {
+    async function handleVisibilityChange() {
       if (document.hidden) {
         if (statusRef.current === "active") {
           pausedAtRef.current = Date.now();
           setSession((prev) => ({ ...prev, status: "paused" }));
+          if (dbSessionIdRef.current) {
+            await callApi(dbSessionIdRef.current, { action: "pause" });
+          }
         }
       } else {
         if (statusRef.current === "paused") {
@@ -90,20 +102,24 @@ export function useInterviewSession(
             status: "active",
             totalPausedMs: prev.totalPausedMs + pausedMs,
           }));
+          if (dbSessionIdRef.current) {
+            await callApi(dbSessionIdRef.current, { action: "resume" });
+          }
         }
       }
     }
 
-    // Fires when the window loses focus (alt-tab, clicking away)
-    function handleWindowBlur() {
+    async function handleWindowBlur() {
       if (statusRef.current === "active") {
         pausedAtRef.current = Date.now();
         setSession((prev) => ({ ...prev, status: "paused" }));
+        if (dbSessionIdRef.current) {
+          await callApi(dbSessionIdRef.current, { action: "pause" });
+        }
       }
     }
 
-    // Fires when the user comes back to the window
-    function handleWindowFocus() {
+    async function handleWindowFocus() {
       if (statusRef.current === "paused") {
         let pausedMs = 0;
         if (pausedAtRef.current !== null) {
@@ -115,6 +131,9 @@ export function useInterviewSession(
           status: "active",
           totalPausedMs: prev.totalPausedMs + pausedMs,
         }));
+        if (dbSessionIdRef.current) {
+          await callApi(dbSessionIdRef.current, { action: "resume" });
+        }
       }
     }
 
@@ -122,7 +141,6 @@ export function useInterviewSession(
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
 
-    // Cleanup event listeners when component unmounts
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("blur", handleWindowBlur);
@@ -130,23 +148,63 @@ export function useInterviewSession(
     };
   }, []);
 
-  function startSession() {
-    setSession((prev) => ({
-      ...prev,
-      startedAt: new Date(),
-      status: "active",
-    }));
+  // Helper to call the session PATCH endpoint
+  async function callApi(sessionId: string, body: object) {
+    try {
+      const res = await fetch(`/api/interview/session/currentuser/${sessionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        console.error("Session API error:", await res.json());
+      }
+    } catch (err) {
+      console.error("Session API call failed:", err);
+    }
   }
 
-  function pauseSession() {
+  // Create the DB session record and start the timer
+  async function startSession(question1Id: string, question2Id: string) {
+    try {
+      const res = await fetch("/api/interview/session/currentuser", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question1Id, question2Id }),
+      });
+
+      if (!res.ok) {
+        console.error("Failed to create session in DB");
+        return;
+      }
+
+      const data = await res.json();
+
+      setSession({
+        dbSessionId: data.id,
+        startedAt: new Date(),
+        status: "active",
+        totalPausedMs: 0,
+      });
+    } catch (err) {
+      console.error("startSession error:", err);
+    }
+  }
+
+  // Manually pause
+  async function pauseSession() {
     if (statusRef.current !== "active") {
       return;
     }
     pausedAtRef.current = Date.now();
     setSession((prev) => ({ ...prev, status: "paused" }));
+    if (dbSessionIdRef.current) {
+      await callApi(dbSessionIdRef.current, { action: "pause" });
+    }
   }
 
-  function resumeSession() {
+  // Manually resume
+  async function resumeSession() {
     if (statusRef.current !== "paused") {
       return;
     }
@@ -160,12 +218,20 @@ export function useInterviewSession(
       status: "active",
       totalPausedMs: prev.totalPausedMs + pausedMs,
     }));
+    if (dbSessionIdRef.current) {
+      await callApi(dbSessionIdRef.current, { action: "resume" });
+    }
   }
 
-  function endSession() {
+  // Complete the session and save responses to DB
+  async function endSession(responses: SessionResponse[]) {
     setSession((prev) => ({ ...prev, status: "ended" }));
+    if (dbSessionIdRef.current) {
+      await callApi(dbSessionIdRef.current, { action: "complete", responses });
+    }
   }
 
+  // Format seconds as mm:ss
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;

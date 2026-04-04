@@ -50,18 +50,18 @@ model Session {
 }
 
 model User {
-  id                String              @id @default(cuid())
+  id                String             @id @default(cuid())
   name              String?
-  email             String?             @unique
+  email             String?            @unique
   emailVerified     DateTime?
   image             String?
   password          String?
   accounts          Account[]
+  interviewSessions InterviewSession[]
+  resumeAnalyses    ResumeAnalysis[]
   sessions          Session[]
   profile           UserProfile?
-  resumeAnalyses    ResumeAnalysis[]
-  interviewSessions InterviewSession[]
-  settings      UserSettings?
+  settings          UserSettings?
 }
 
 model VerificationToken {
@@ -133,13 +133,14 @@ model InterviewSession {
   feedback      Json?
   responses     InterviewResponse[]
 
-  savedData		StoredBehavioralSession[]
-  prompt		String?
+  savedData		  StoredBehavioralSession[]
+  prompt		    String?
 
   question1Id   String?                // reference TechnicalQuestion.id
   question2Id   String?                // reference TechnicalQuestion.id
   resumedAt     DateTime?              // Session timer; when was last resumed
   pausedAt      DateTime?              // null = running
+  totalPausedMs Int                  @default(0)
 
   @@index([userId])
 }
