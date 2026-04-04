@@ -1,3 +1,13 @@
+// Dylan Hartley
+// 12/12/2025
+// Alexander Tu
+
+// Brandon Christian
+// Date: 2/19/2026
+// Added BehavioralPrompt
+// Date: 3/17/2026
+// Added StoredBehavioralSession
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -7,6 +17,10 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ============================================
+// NextAuth Tables (Required for Authentication)
+// ============================================
 
 model Account {
   id                       String  @id @default(cuid())
@@ -58,58 +72,72 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+// ============================================
+// User Profile (Optional Extended Info)
+// ============================================
+
 model UserProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  firstName    String?
-  lastName     String?
-  phoneNumber  String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  emailAddress String?
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName       String?
+  lastName        String?
+  phoneNumber     String?
+  emailAddress    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 model UserSettings {
-  id              String  @id @default(cuid())
-  userId          String  @unique
-  prefersDarkMode Boolean @default(false)
-  languagePref    String? @default("JavaScript")
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  prefersDarkMode       Boolean     @default(false)
+  languagePref          String?     @default("JavaScript")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
+// ============================================
+// Resume Scanner Feature
+// ============================================
+
 model ResumeAnalysis {
   id             String   @id @default(cuid())
   userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resumeName     String
   jobDescription String?
   atsScore       Int?
   matchScore     Float?
   feedback       Json
   analyzedAt     DateTime @default(now())
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
+// ============================================
+// Interview Features (Behavioral & Technical)
+// ============================================
+
 model InterviewSession {
-  id                      String                    @id @default(cuid())
-  userId                  String
-  type                    InterviewType
-  status                  SessionStatus             @default(IN_PROGRESS)
-  startedAt               DateTime                  @default(now())
-  completedAt             DateTime?
-  overallScore            Float?
-  feedback                Json?
-  pausedAt                DateTime?
+  id            String              @id @default(cuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          InterviewType
+  status        SessionStatus       @default(IN_PROGRESS)
+  startedAt     DateTime            @default(now())
+  completedAt   DateTime?
+  overallScore  Float?
+  feedback      Json?
+  responses     InterviewResponse[]
   prompt                  String?
-  question1Id             String?
-  question2Id             String?
-  resumedAt               DateTime?
-  responses               InterviewResponse[]
-  user                    User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question1Id   String?                // reference TechnicalQuestion.id
+  question2Id   String?                // reference TechnicalQuestion.id
+  resumedAt     DateTime?              // Session timer; when was last resumed
+  pausedAt      DateTime?              // null = running
+  totalPausedMs Int                  @default(0)
   StoredBehavioralSession StoredBehavioralSession[]
 
   @@index([userId])
@@ -118,65 +146,72 @@ model InterviewSession {
 model InterviewResponse {
   id         String           @id @default(cuid())
   sessionId  String
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question   String
   answer     String
   score      Float?
   feedback   String?
   answeredAt DateTime         @default(now())
-  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
 }
 
 model TechnicalQuestion {
-  id           String     @id
+  id           String   @id
+  slug         String   @unique // ex: problem name in url "3sum"
+  title        String           // ex: 9. 3Sum
+  description  String   @db.Text
   difficulty   String
   category     String
-  createdAt    DateTime   @default(now())
-  description  String
-  functionName String
-  outputType   String
-  params       Json
-  slug         String     @unique
   starterCode  Json
-  title        String
+  functionName String           //ex: string("twoSum")
+  params       Json
+  outputType   String
+  createdAt    DateTime @default(now())
+
   testCases    TestCase[]
 }
 
 model TestCase {
-  id             String            @id @default(cuid())
-  input          Json
+  id             String   @id @default(cuid())
+  input          Json     //Input params.. ex: {"nums": [2, 7, 11, 15]}
   expectedOutput String
-  isHidden       Boolean           @default(false)
+  isHidden       Boolean  @default(false)
+
+  //Foreign Key
   problemId      String
   problem        TechnicalQuestion @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }
 
 model InterviewReport {
-  id         String   @id @default(cuid())
-  userId     String
-  sessionId  String
-  summary    String
-  isFavorite Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id            String      @id @default(cuid())
+  userId        String
+  sessionId     String
+  summary       String
+  isFavorite    Boolean     @default(false)
+  createdAt     DateTime    @default(now())
 
   @@index([userId])
   @@index([sessionId])
 }
 
 model BehavioralPrompt {
-  id     String @id
+  id     String @id @default(cuid())
   prompt String
 }
 
 model StoredBehavioralSession {
-  id               String           @id
+  id               String           @id @default(cuid())
   sessionId        String
+  session          InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   transcript       String?
   videoURL         String?
   feedback         Json?
-  InterviewSession InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
+
+// ============================================
+// Enums
+// ============================================
 
 enum InterviewType {
   BEHAVIORAL

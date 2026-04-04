@@ -6,7 +6,10 @@
 import { useEffect, useState } from "react";
 import CodeEditor, { getStarterCode, type SupportedLanguage } from "./_components/CodeEditor";
 import { useInterviewSession, type SessionResponse } from "./useInterviewSession";
-import allQuestions from "../../../prisma/data/consolidated-questions.json";
+import type { TestResult } from "~/lib/testHarness";
+import type { QuestionSummary } from "~/app/api/questions/route";
+
+type SolutionsMap = Record<string, Record<string, string>>;
 
 /* Page States */
 enum TIPageState {
@@ -15,85 +18,32 @@ enum TIPageState {
   END,
 }
 
-/* Question Type */
-type Question = {
-  id: string;
-  title: string;
-  description: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  category: string;
-  starterCode: {
-    python?: string;
-    cpp?: string;
-    java?: string;
-    csharp?: string;
-  };
-};
-
-// Randomly selects two questions from different difficulty tiers.
-// Valid pairings: Easy+Medium, Easy+Hard, Medium+Hard.
-function pickTwoQuestions(): Question[] {
-  const easy = allQuestions.filter((q) => q.difficulty === "Easy") as Question[];
-  const medium = allQuestions.filter((q) => q.difficulty === "Medium") as Question[];
-  const hard = allQuestions.filter((q) => q.difficulty === "Hard") as Question[];
-
-  // Randomly pick one item from an array
-  function pickRandom(arr: Question[]): Question {
-    const index = Math.floor(Math.random() * arr.length);
-    return arr[index]!;
-  }
-
-  // Randomly choose which difficulty pairing to use
-  const pairings = [
-    [easy, medium],
-    [easy, hard],
-    [medium, hard],
-  ];
-
-  // Filter out any pairings where one of the tiers is empty
-  const validPairings = pairings.filter(
-    (pair) => pair[0]!.length > 0 && pair[1]!.length > 0
-  );
-
-  // Pick a random valid pairing
-  const chosenPairing = validPairings[Math.floor(Math.random() * validPairings.length)]!;
-
-  const question1 = pickRandom(chosenPairing[0]!);
-  const question2 = pickRandom(chosenPairing[1]!);
-
-  return [question1, question2];
-}
-
 /* View Switcher */
 export default function TechnicalInterviewViewSwitcher() {
-
   const [pageState, setPageState] = useState<TIPageState>(TIPageState.START);
 
-  // Pick two questions once when the component first mounts
-  const [questions] = useState<Question[]>(pickTwoQuestions());
+  // Fetch questions dynamically from API
+  const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
 
   const [language, setLanguage] = useState<SupportedLanguage>("python");
+  const [code, setCode] = useState("");
 
-  // Load the starter code for the first question in the selected language
-  // Falls back to CodeEditor's generic starter code if the question doesn't have one
-  const [code, setCode] = useState(
-    questions[0]?.starterCode?.python ?? getStarterCode("python")
-  );
+  // Real per-test-case results from /api/judge
+  const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [compileOutput, setCompileOutput] = useState("");
+  const [stderr, setStderr] = useState("");
 
-  const [output, setOutput] = useState("");
-  const [passed, setPassed] = useState<boolean | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [questionStatus, setQuestionStatus] = useState<boolean[]>([]);
 
-  const [questionStatus, setQuestionStatus] = useState<boolean[]>(
-    questions.map(() => false)
-  );
+  const [solutions, setSolutions] = useState<SolutionsMap>({});
+  const [rightTab, setRightTab] = useState<"results" | "solution">("results");
 
   // Store the code written per question so we can save it on finish
-  const [questionCode, setQuestionCode] = useState<string[]>(
-    questions.map(() => "")
-  );
+  const [questionCode, setQuestionCode] = useState<string[]>([]);
 
-  // Called by the hook when the 60 minute timer hits zero
+  // Called by the hook when the 60-minute timer hits zero
   function handleTimeExpired() {
     setPageState(TIPageState.END);
   }
@@ -101,10 +51,35 @@ export default function TechnicalInterviewViewSwitcher() {
   const { session, timeLeft, startSession, resumeSession, endSession, formatTime } =
     useInterviewSession(handleTimeExpired);
 
+  // Fetch questions and solutions from JSON-backed APIs on mount
+  useEffect(() => {
+    fetch("/api/questions")
+      .then((r) => r.json())
+      .then((data: QuestionSummary[]) => {
+        setQuestions(data);
+        setQuestionStatus(data.map(() => false));
+        setQuestionCode(data.map(() => ""));
+        if (data[0]) {
+          setCode(data[0].starterCode["python"] ?? getStarterCode("python"));
+        }
+      })
+      .catch(console.error);
+
+      //Alvin Ngo work report 3
+    fetch("/api/solutions")
+      .then((r) => {
+        if (!r.ok) throw new Error(`/api/solutions returned ${r.status}`);
+        return r.json();
+      })
+      .then((data: SolutionsMap) => setSolutions(data))
+      .catch((e) => console.error("Failed to load solutions:", e));
+  }, []);
+
   // Pause the session in the DB when the user navigates away from the page
   useEffect(() => {
     function handleBeforeUnload() {
       if (session.status === "active" && session.dbSessionId) {
+        // sendBeacon is used here because regular fetch gets cancelled on page unload
         navigator.sendBeacon(
           `/api/interview/session/currentuser/${session.dbSessionId}`,
           JSON.stringify({ action: "pause" })
@@ -118,13 +93,13 @@ export default function TechnicalInterviewViewSwitcher() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [session.status, session.dbSessionId]);
-  // When the language changes, reload the starter code for the current question
+
+  const currentQuestion = questions[currentQuestionIndex];
+
   function handleLanguageChange(newLang: SupportedLanguage) {
     setLanguage(newLang);
-    const currentQuestion = questions[currentQuestionIndex];
     if (currentQuestion) {
-      const starter = currentQuestion.starterCode[newLang];
-      setCode(starter ?? getStarterCode(newLang));
+      setCode(currentQuestion.starterCode[newLang] ?? getStarterCode(newLang));
     }
   }
 
@@ -137,9 +112,12 @@ export default function TechnicalInterviewViewSwitcher() {
     });
   }
 
-  // Start a specific question, also kicks off the DB session on first entry
+  // Start a specific question; kicks off or resumes the session
   async function startInterview(index: number) {
     setCurrentQuestionIndex(index);
+    setTestResults([]);
+    setCompileOutput("");
+    setStderr("");
     setPageState(TIPageState.ACTIVE);
 
     // Restore previously written code for this question if it exists
@@ -162,11 +140,10 @@ export default function TechnicalInterviewViewSwitcher() {
     }
   }
 
-  // Finish the interview early — saves all responses to DB
+  // Finish the interview early
   async function finishEarly() {
     saveCurrentCode();
 
-    // Build response array from the code written for each question
     const responses: SessionResponse[] = questions.map((q, idx) => ({
       question: q.title,
       answer: questionCode[idx] ?? "",
@@ -176,46 +153,68 @@ export default function TechnicalInterviewViewSwitcher() {
     setPageState(TIPageState.END);
   }
 
-  // Go back to question list — saves code, timer keeps running
+  // Go back to question list; timer keeps running
   function backToQuestions() {
     saveCurrentCode();
     setPageState(TIPageState.START);
   }
 
-  // Judge0 language IDs
-  const JUDGE0_LANGUAGE_IDS: Record<SupportedLanguage, number> = {
-    python: 71,
-    cpp: 54,
-  };
+  async function runCode() {
+    if (!currentQuestion) return;
+    setIsRunning(true);
+    setTestResults([]);
+    setCompileOutput("");
+    setStderr("");
 
-  function runCode() {
-    const payload = {
-      source_code: code,
-      language_id: JUDGE0_LANGUAGE_IDS[language],
-    };
-    setOutput(JSON.stringify(payload, null, 2));
-    setPassed(null);
+    try {
+      const response = await fetch("/api/judge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_code: code,
+          language,
+          questionId: currentQuestion.id,
+        }),
+      });
 
-    // Save latest code on run
-    setQuestionCode((prev) => {
-      const updated = [...prev];
-      updated[currentQuestionIndex] = code;
-      return updated;
-    });
+      const result = await response.json();
+
+      if (!response.ok) {
+        setStderr(result.error ?? "Unknown error");
+        return;
+      }
+
+      setTestResults(result.testResults ?? []);
+      setCompileOutput(result.compile_output ?? "");
+      setStderr(result.stderr ?? "");
+
+      if (result.allPassed) {
+        setQuestionStatus((prev) => {
+          const next = [...prev];
+          next[currentQuestionIndex] = true;
+          return next;
+        });
+      }
+
+      // Save latest code on run
+      setQuestionCode((prev) => {
+        const updated = [...prev];
+        updated[currentQuestionIndex] = code;
+        return updated;
+      });
+    } catch (error) {
+      setStderr(error instanceof Error ? error.message : "Failed to execute");
+    } finally {
+      setIsRunning(false);
+    }
   }
 
-  // Returns a colored difficulty badge for a question
+  // Colored difficulty badge
   function DifficultyBadge({ difficulty }: { difficulty: string }) {
     let badgeColor = "bg-gray-100 text-gray-600";
-
-    if (difficulty === "Easy") {
-      badgeColor = "bg-green-100 text-green-700";
-    } else if (difficulty === "Medium") {
-      badgeColor = "bg-yellow-100 text-yellow-700";
-    } else if (difficulty === "Hard") {
-      badgeColor = "bg-red-100 text-red-600";
-    }
-
+    if (difficulty === "Easy") badgeColor = "bg-green-100 text-green-700";
+    else if (difficulty === "Medium") badgeColor = "bg-yellow-100 text-yellow-700";
+    else if (difficulty === "Hard") badgeColor = "bg-red-100 text-red-600";
     return (
       <span className={"text-xs px-2 py-1 rounded-full font-medium ml-2 " + badgeColor}>
         {difficulty}
@@ -223,11 +222,10 @@ export default function TechnicalInterviewViewSwitcher() {
     );
   }
 
-  // Small badge that shows the current session status in the header
+  // Session status badge
   function SessionBadge() {
     let badgeColor = "bg-gray-200 text-gray-600";
     let badgeText = "Not Started";
-
     if (session.status === "active") {
       badgeColor = "bg-green-100 text-green-700";
       badgeText = "Session Active";
@@ -238,7 +236,6 @@ export default function TechnicalInterviewViewSwitcher() {
       badgeColor = "bg-red-100 text-red-600";
       badgeText = "Session Ended";
     }
-
     return (
       <span className={"text-xs px-2 py-1 rounded-full font-medium " + badgeColor}>
         {badgeText}
@@ -259,9 +256,7 @@ export default function TechnicalInterviewViewSwitcher() {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <span className="font-semibold">
-                Time Remaining: {formatTime(timeLeft)}
-              </span>
+              <span className="font-semibold">Time Remaining: {formatTime(timeLeft)}</span>
               <SessionBadge />
             </div>
           </div>
@@ -270,6 +265,10 @@ export default function TechnicalInterviewViewSwitcher() {
             <div className="bg-orange-500 text-white px-4 py-2 font-semibold">
               Technical Skill Testing
             </div>
+
+            {questions.length === 0 && (
+              <div className="px-4 py-6 text-gray-500 text-sm">Loading questions...</div>
+            )}
 
             {questions.map((q, index) => (
               <div
@@ -285,7 +284,6 @@ export default function TechnicalInterviewViewSwitcher() {
                     <span className="text-gray-400 ml-2">(Incomplete)</span>
                   )}
                 </span>
-
                 <button
                   onClick={() => void startInterview(index)}
                   className="bg-orange-500 text-white px-4 py-1 rounded ml-4 shrink-0"
@@ -300,93 +298,176 @@ export default function TechnicalInterviewViewSwitcher() {
 
     case TIPageState.ACTIVE:
       return (
-        <main className="min-h-screen px-6 py-10">
-
-          {/* Header with back button and timer */}
-          <div className="flex justify-between max-w-4xl mx-auto items-center">
-            <button
-              onClick={backToQuestions}
-              className="text-sm text-blue-600 underline"
-            >
-              ← Back to questions
-            </button>
-            <div className="flex flex-col items-end gap-1">
-              <span className="font-semibold">
-                Time Remaining: {formatTime(timeLeft)}
-              </span>
+        <main className="h-screen flex flex-col overflow-hidden px-4">
+          {/* Header */}
+          <div className="flex items-center justify-between py-2 shrink-0">
+            <div className="flex items-center gap-4">
+              <button onClick={backToQuestions} className="text-sm text-blue-600 underline">
+                ← Back
+              </button>
+              <button
+                onClick={() => void finishEarly()}
+                disabled={!questionStatus.some(Boolean)}
+                className={
+                  questionStatus.some(Boolean)
+                    ? "text-sm underline text-red-600"
+                    : "text-sm underline text-gray-400 cursor-not-allowed"
+                }
+              >
+                Finish Early
+              </button>
+            </div>
+            <div className="flex items-center gap-3">
               <SessionBadge />
+              <span className="font-semibold text-sm">Time Remaining: {formatTime(timeLeft)}</span>
             </div>
           </div>
 
-          <div className="max-w-4xl mx-auto mt-2">
-            <button
-              onClick={() => void finishEarly()}
-              disabled={!questionStatus.some(Boolean)}
-              className={
-                questionStatus.some(Boolean)
-                  ? "text-sm underline text-red-600"
-                  : "text-sm underline text-gray-400 cursor-not-allowed"
-              }
-            >
-              Finish Test Early
-            </button>
-          </div>
-
-          {/* Show a banner when the session is paused */}
+          {/* Pause banner */}
           {session.status === "paused" && (
-            <div className="max-w-4xl mx-auto mt-4 bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-3 rounded text-sm text-center">
+            <div className="bg-yellow-50 border border-yellow-300 text-yellow-800 px-4 py-2 rounded text-sm text-center shrink-0">
               Timer paused — your session will resume when you return to this tab.
             </div>
           )}
 
-          {/* Question title and difficulty */}
-          <div className="max-w-4xl mx-auto border rounded p-4 mt-6">
-            <div className="flex items-center mb-2">
-              <h2 className="font-semibold text-lg">
-                {questions[currentQuestionIndex]?.title}
-              </h2>
-              <DifficultyBadge difficulty={questions[currentQuestionIndex]?.difficulty ?? ""} />
+          {/* Question */}
+          {currentQuestion && (
+            <div className="border rounded p-3 mt-2 overflow-y-auto max-h-[22vh] shrink-0">
+              <div className="flex items-center mb-1">
+                <h2 className="font-semibold text-base">{currentQuestion.title}</h2>
+                <DifficultyBadge difficulty={currentQuestion.difficulty} />
+              </div>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {currentQuestion.description}
+              </p>
             </div>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">
-              {questions[currentQuestionIndex]?.description}
-            </p>
-          </div>
+          )}
 
-          {/* Code editor and output panel */}
-          <div className="max-w-4xl mx-auto grid grid-cols-2 gap-6 mt-6">
-            <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2">Code</h3>
+          {/* Code editor — takes remaining vertical space */}
+          <div className="border rounded p-3 mt-2 flex flex-col flex-1 min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <h3 className="font-semibold text-sm">Code</h3>
+              <button
+                onClick={() => void runCode()}
+                disabled={isRunning}
+                className={`px-4 py-1 rounded text-white text-sm ${
+                  isRunning
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-orange-500 hover:bg-orange-600"
+                }`}
+              >
+                {isRunning ? "Running..." : "Run Code"}
+              </button>
+            </div>
+            <div className="flex-1 min-h-0">
               <CodeEditor
                 language={language}
                 value={code}
                 onChange={setCode}
                 onLanguageChange={handleLanguageChange}
-                height="300px"
+                height="100%"
               />
+            </div>
+          </div>
+
+          {/* Bottom panel: Test Results / Solution tabs */}
+          <div className="border rounded mt-2 mb-2 flex flex-col shrink-0 h-[28vh]">
+            {/* Tab bar */}
+            <div className="flex border-b shrink-0">
               <button
-                onClick={runCode}
-                className="mt-3 bg-orange-500 text-white px-4 py-1 rounded"
+                onClick={() => setRightTab("results")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  rightTab === "results"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
               >
-                Run Code
+                Test Results
+              </button>
+              <button
+                onClick={() => setRightTab("solution")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  rightTab === "solution"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Solution
               </button>
             </div>
 
-            <div className="border rounded p-4">
-              <h3 className="font-semibold mb-2">Results (Judge0 Payload)</h3>
-              <pre className="bg-gray-100 h-64 p-2 rounded text-sm overflow-auto whitespace-pre-wrap">
-                {output || "Click 'Run Code' to see test of results sent to backend"}
-              </pre>
-
-              <div className="mt-4 text-sm">
-                {passed === null && <p>Run code to see results</p>}
-                {passed === true && (
-                  <p className="text-green-600">Case Test Passed ✅</p>
+            {/* Test Results tab */}
+            {rightTab === "results" && (
+              <div className="p-4 overflow-y-auto flex-1">
+                {compileOutput && (
+                  <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-3 whitespace-pre-wrap">
+                    Compile Error:{"\n"}{compileOutput}
+                  </pre>
                 )}
-                {passed === false && (
-                  <p className="text-red-600">Case Test Failed ❌</p>
+                {stderr && !compileOutput && (
+                  <pre className="bg-red-50 text-red-700 text-sm p-3 rounded mb-3 whitespace-pre-wrap">
+                    {stderr}
+                  </pre>
+                )}
+                {testResults.length === 0 && !compileOutput && !stderr && (
+                  <p className="text-gray-400 text-sm">Run your code to see test results</p>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  {testResults.map((r) => (
+                    <div
+                      key={r.case}
+                      className={`p-3 rounded border text-sm min-w-[180px] ${
+                        r.passed ? "border-green-300 bg-green-50" : "border-red-300 bg-red-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold">
+                          Case {r.case}{r.isHidden ? " (hidden)" : ""}
+                        </span>
+                        <span className={`font-semibold ${r.passed ? "text-green-600" : "text-red-600"}`}>
+                          {r.passed ? "✓" : "✗"}
+                        </span>
+                      </div>
+                      {r.error ? (
+                        <p className="text-red-700 text-xs">{r.error}</p>
+                      ) : (
+                        <>
+                          <p className="text-gray-700 text-xs">
+                            Expected: <code className="bg-white px-1 rounded border">{r.expected}</code>
+                          </p>
+                          {!r.passed && (
+                            <p className="text-gray-700 text-xs mt-0.5">
+                              Got: <code className="bg-white px-1 rounded border">{r.actual}</code>
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {testResults.length > 0 && (
+                  <p className="text-sm font-semibold mt-3">
+                    {testResults.filter((r) => r.passed).length} / {testResults.length} passed
+                  </p>
                 )}
               </div>
-            </div>
+            )}
+
+            {/* Solution tab */}
+            {rightTab === "solution" && (
+              <div className="p-4 overflow-y-auto flex-1">
+                {currentQuestion && solutions[currentQuestion.id]?.python ? (
+                  <>
+                    <p className="text-xs text-gray-400 mb-2">Python reference solution</p>
+                    <pre className="bg-gray-900 text-gray-100 text-xs p-3 rounded overflow-auto whitespace-pre font-mono leading-relaxed h-full">
+                      {solutions[currentQuestion.id]!.python}
+                    </pre>
+                  </>
+                ) : (
+                  <p className="text-gray-400 text-sm">No solution available for this question.</p>
+                )}
+              </div>
+            )}
           </div>
         </main>
       );
@@ -397,10 +478,10 @@ export default function TechnicalInterviewViewSwitcher() {
           <div className="flex flex-col items-center">
             <h1 className="text-3xl font-bold mb-6">Interview Complete</h1>
             <ul className="text-sm space-y-2">
-              {questionStatus.map((done, idx) => (
-                <li key={idx}>
-                  {questions[idx]?.title ?? "Question #" + (idx + 1)}:{" "}
-                  {done === true ? (
+              {questions.map((q, idx) => (
+                <li key={q.id}>
+                  {q.title}:{" "}
+                  {questionStatus[idx] ? (
                     <span className="text-green-600 font-semibold">Complete</span>
                   ) : (
                     <span className="text-red-600 font-semibold">Incomplete</span>
