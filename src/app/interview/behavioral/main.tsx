@@ -24,9 +24,6 @@ import { BIEnd } from "./end";
 
 export async function OnStartInterviewClicked(): Promise<any> {
 
-    //TODO:
-    //Begin camera recording
-
     //Get Interview Prompt from server
     const prompt = await GetPrompt();
 
@@ -36,8 +33,10 @@ export async function OnStartInterviewClicked(): Promise<any> {
         throw new Error("Fetch Prompt Failed.")
     }
 
+    console.log("prompt got. creating new session")
+
     //Create a new session on the server
-    const newSession = await CreateSession();
+    const newSession = await CreateSession(prompt.prompt);
 
     if (!newSession) {
         console.log("Failed to create new session!");
@@ -76,8 +75,7 @@ export function BehavioralInterview() {
             <h1>Behavioral Interview Session</h1>
             <p className="description">
                 Simulate an authentic interview experience.
-                Your responses will be evaluated for clairty, tone, and professionalism in
-                real time.
+                Your responses will be evaluated for clairty, tone, and professionalism.
             </p>
             <ViewSwitcher />
             <br />
@@ -94,6 +92,34 @@ export enum BIPageState {
     END
 }
 
+//returns a function that will resolve with a blob once the blob ref is no longer null
+//This allows future components to call this function expecting to get a unique promise
+function waitForData(dataRef: React.RefObject<Blob|null>, message: string): () => Promise<Blob> {
+
+    return () => {
+        return new Promise((resolve) => {
+            if (dataRef.current) {
+                resolve(dataRef.current);
+                return;
+            }
+
+            const intervalDelay = 50;
+
+            //wait for 50 ticks before checking again
+            const interval = setInterval(() => {
+                if (dataRef.current) {
+                    clearInterval(interval);
+                    resolve(dataRef.current);
+                }
+                else {
+                    console.log(message);
+                }
+            }, intervalDelay);
+        });
+    }
+}
+
+
 function ViewSwitcher() {
 
     /*
@@ -106,39 +132,32 @@ function ViewSwitcher() {
     //Data maintained between page states
     const [interviewPrompt, setInterviewPrompt] = useState("no prompt.");
     const [sessionId, setSessionId] = useState("");
+
+    //ref to store actual data recorded
     const audioRef = useRef<Blob | null>(null);
+    const storeVideoRef = useRef<Blob | null>(null);
 
     //use deferred promise so that BIEnd can wait until
-    //the audio is ready from BIActive before attempting to upload
-    function waitForAudio(): Promise<Blob> {
-        return new Promise((resolve) => {
-            if (audioRef.current) {
-                resolve(audioRef.current);
-                return;
-            }
+    //the data is ready from BIActive before attempting to upload
+    //returns a unique promise that holds until the data is null
+    //then resolves to the data
+    const waitForAudio = waitForData(audioRef, "Waiting for audio...");
+    const waitForVideo = waitForData(storeVideoRef, "Waiting for video...");
 
-            const intervalDelay = 50;
+    const [usePause, setPause] = useState(false);
+    const [isResume, setResume] = useState(false);
 
-            //wait for 50 ticks before checking again
-            const interval = setInterval(() => {
-                if (audioRef.current) {
-                    clearInterval(interval);
-                    resolve(audioRef.current);
-                }
-            }, intervalDelay);
-        });
-    }
 
     switch (pageState) {
         case BIPageState.START:
-            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} />);
+            return (<BIStart changeState={setPageState} changePrompt={setInterviewPrompt} audioRef={audioRef} setSessionId={setSessionId} storeVideoRef={storeVideoRef} setResume={setResume} />);
 
         case BIPageState.ACTIVE:
-            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} />);
+            return (<BIActive changeState={setPageState} prompt={interviewPrompt} audioRef={audioRef} storeVideoRef={storeVideoRef} sessionId={sessionId} setPause={setPause} resumedBefore={isResume} />);
 
         case BIPageState.END:
             console.log("Loading END with id: " + sessionId);
-            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} sessionId={sessionId} />);
+            return (<BIEnd changeState={setPageState} waitForAudio={waitForAudio} waitForVideo={waitForVideo} sessionId={sessionId} usePause={usePause} />);
     }
 }
 

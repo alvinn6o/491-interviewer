@@ -101,7 +101,7 @@ export async function OnAddJobDescriptionClicked(
     }
 
     const { atsResult } = result.data;
-    const { keywordResult, breakdown, details, score, grade } = atsResult;
+    const { keywordResult, breakdown, details, score, grade, formattingResult } = atsResult;
 
     // Build FeedbackItem[] from ATS scoring results
     const items: FeedbackItem[] = [];
@@ -131,7 +131,7 @@ export async function OnAddJobDescriptionClicked(
         });
     }
 
-    // Skills Match: technical skills + tools
+    // Technical Skills: hard skills and tools extracted from the job description
     const technicalMatches = keywordResult.matches.filter(
         (m: { category: string }) => m.category === "technical_skill" || m.category === "tool"
     );
@@ -146,7 +146,22 @@ export async function OnAddJobDescriptionClicked(
         });
     }
 
-    // Keywords: all job description keywords
+    // Behavioral Skills: soft skills and non-technical keywords from the job description
+    const behavioralMatches = keywordResult.matches.filter(
+        (m: { category: string }) => m.category !== "technical_skill" && m.category !== "tool"
+    );
+    for (const match of behavioralMatches) {
+        items.push({
+            key: FeedbackCategory.BEHAVIORAL_SKILLS,
+            name: match.keyword,
+            description: match.found
+                ? `"${match.keyword}" found in resume`
+                : `"${match.keyword}" missing from resume`,
+            status: match.found,
+        });
+    }
+
+    // Keywords: all keywords used for job description tab highlighting
     for (const match of keywordResult.matches) {
         items.push({
             key: FeedbackCategory.KEYWORDS,
@@ -207,6 +222,16 @@ export async function OnAddJobDescriptionClicked(
             name: "Weak Match",
             description: "Significant gaps detected — heavily tailor your resume for this role",
             status: false,
+        });
+    }
+
+    // Formatting: rule-based checks on resume structure
+    for (const check of formattingResult.checks) {
+        items.push({
+            key: FeedbackCategory.FORMATTING,
+            name: check.name,
+            description: check.explanation,
+            status: check.passed,
         });
     }
 

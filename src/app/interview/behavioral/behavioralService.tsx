@@ -12,45 +12,74 @@
 //Change api point "store" to "end"
 
 import type { FeedbackItem } from "./feedbackItem";
+import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 
-export async function SendAudioToServer(audioData: Blob) {
-    //Extract the file extension
-    //which differs between browsers
-    const mimeType = audioData.type;
-    const extension = mimeType.split("/")[1];
+//Wrapper function to simplify calls to behavioral service
+export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
+
+    const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
+
+
+    const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
 
     const formData = new FormData();
 
     formData.append(
-        "audio",
-        audioData,
-        `recording.${extension}`
+        "feedback",
+        JSON.stringify(allFeedback)
     );
 
-    //TODO: remove early end
-    //saves api call costs during testing.
-    return [CreateFeedbackItem("remove line 28 in behavioralService.tsx", "interrupt before api call to save costs during testing.", 1)];
-
-    console.log("about to send blob to back end");
-    console.log("blob size: " + audioData.size);
-
-    const response = await fetch("/api/behavioral/uploadAudio", {
+    const response = await fetch(`/api/behavioral/setFeedback/${sessionId}`, {
         method: "POST",
         body: formData
     });
 
-    const data = await response.json();
+    return allFeedback;
+}
 
-    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(data));
+async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
+    //Attach data to form data
+    //in order to send it to the api
+    console.log("Send blob to " + apiURL);
 
-    //send to page.tsx
+    const formData = new FormData();
+
+    formData.append(
+        formDataKey,
+        data
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
+    );
+
+    //obtain json analysis of the feedback data
+    const response = await fetch(apiURL, {
+        method: "POST",
+        body: formData
+    });
+
+    console.log("got response from " + apiURL);
+
+    //Convert json to FeedbackItem objects
+    const responseData = await response.json();
+    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(responseData));
+
+    console.log("convert to fbItems from  " + apiURL);
+
+    //send to end.tsx
     return fbItems;
 }
+
 
 //Get prompt from database
 export async function GetPrompt() {
     try {
+        console.log("getting prompt");
+
         const response = await fetch("/api/behavioral/prompt", {
             method: "GET"
         });
@@ -63,34 +92,35 @@ export async function GetPrompt() {
 
         return json;
     } catch (err) {
-        throw err;
+        return ({
+            success: true,
+            prompt: "TODO: fill DB with prompts."
+        });
+        //throw err;
     }
     
 }
 
-export async function SaveSession(audioData: Blob, videoData: any) {
-
-    //TODO: get session ID and store that?
-    //have to make a session as soon as we start!
-
-    const mimeType = audioData.type;
-    const extension = mimeType.split("/")[1];
-
+export async function PauseSession(sessionId: string, audioData: Blob, videoData: any) {
     const formData = new FormData();
 
     formData.append(
         "audio",
-        audioData,
-        `recording.${extension}`
+        audioData
     );
 
     formData.append(
         "video",
         videoData
-    )
+    );
+
+    formData.append(
+        "sessionId",
+        sessionId
+    );
 
 
-    const response = await fetch("/api/behavioral/save", {
+    const response = await fetch("/api/behavioral/pause", {
         method: "POST",
         body: formData
     })
@@ -98,16 +128,49 @@ export async function SaveSession(audioData: Blob, videoData: any) {
     return response.json();
 }
 
-export async function CreateSession() {
-    const response = await fetch("/api/behavioral/create", {
+export async function AbandonSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/abandon/${sessionId}`, {
         method: "POST"
     });
 
     return response.json();
 }
 
+export async function CreateSession(prompt: string) {
+    console.log("Creating session POST")
+
+    const response = await fetch("/api/behavioral/create", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({ prompt }),
+    });
+
+    console.log("Created session POST")
+
+    return response.json();
+}
+
 export async function EndSession(sessionId: string) {
     const response = await fetch(`/api/behavioral/end/${sessionId}`, {
+        method: "POST"
+    });
+
+    return response.json();
+}
+
+export async function FindPausedSession() {
+    const response = await fetch(`/api/behavioral/resume`, {
+        method: "GET"
+    });
+
+    return response.json();
+}
+
+export async function ResumeSession(sessionId: string) {
+    const response = await fetch(`/api/behavioral/resume/${sessionId}`, {
         method: "POST"
     });
 

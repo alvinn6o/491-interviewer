@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { ProcessAudioToText, ProcessTextToTokens } from "./audioProcess";
+import { db } from "~/server/db";
 
 export async function POST(req: NextRequest) {
 
@@ -20,23 +21,35 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    //Process Audio
-    const text = await ProcessAudioToText(audio);
 
-    //TODO: send result to Behavioral Analysis
+    //Process Audio
+    let text = await ProcessAudioToText(audio);
+
+    //gather all text transcripts of all StoredBehaioralSessions and combine with result text
+    const sessionId = formData.get("sessionId") as string;
+
+    const storedSessions = await db.storedBehavioralSession.findMany({
+        where: {
+            sessionId: sessionId,
+        }
+    });
+
+    storedSessions.forEach(
+        (storedSession) => {
+            if (storedSession.transcript) {
+                text = text + " " + storedSession.transcript;
+            }
+        }
+    );
 
     const tokensByCount = ProcessTextToTokens(text);
 
-    //TODO: send result to Behavioral Analysis
 
-    //test items in place of actual data
+    //TODO: send processed results to Behavioral Analysis
+
+    //TODO: test items in place of actual data
     const test_items = [
-        { category: "Notes", content: "Example paragraph. This is where you will see a description of your interview.", score: 1 },
-        { category: "Eye Contact", content: "", score: 1 },
-        { category: "Confidence", content: "", score: 2 },
-        { category: "Quality of Answers", content: "", score: 3 },
-        { category: "Sociability", content: "", score: 4 },
-        { category: "Clear Speach", content: "", score: 5 },
+        { category: "Notes", content: text, score: 0 }
 
     ];
 
