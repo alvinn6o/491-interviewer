@@ -23,7 +23,7 @@ type UseInterviewSessionReturn = {
   pauseSession: () => Promise<void>;
   resumeSession: () => Promise<void>;
   endSession: (responses: SessionResponse[]) => Promise<void>;
-  hydrateSession: (dbSessionId: string, totalPausedMs: number) => void;
+  hydrateSession: (dbSessionId: string, totalPausedMs: number, startedAt: string) => void;
   formatTime: (seconds: number) => string;
 };
 
@@ -234,11 +234,24 @@ export function useInterviewSession(
   }
 
   // Hydrate an existing session from the DB — used when resuming from history
-  function hydrateSession(dbSessionId: string, totalPausedMs: number) {
+  function hydrateSession(dbSessionId: string, totalPausedMs: number, startedAt: string) {
     dbSessionIdRef.current = dbSessionId;
+    statusRef.current = "paused";
+
+    const startedAtMs = new Date(startedAt).getTime();
+    const elapsedMs = Date.now() - startedAtMs;
+    const activeMs = elapsedMs - totalPausedMs;
+    const activeSeconds = Math.floor(activeMs / 1000);
+    const remaining = INTERVIEW_DURATION_SECONDS - activeSeconds;
+
+    // If the session has already exceeded 60 minutes of active time,
+    // give the user 5 minutes to wrap up instead of instantly ending
+    const clampedRemaining = remaining <= 0 ? 5 * 60 : remaining;
+
+    setTimeLeft(clampedRemaining);
     setSession({
       dbSessionId,
-      startedAt: null,
+      startedAt: new Date(startedAt),
       status: "paused",
       totalPausedMs,
     });

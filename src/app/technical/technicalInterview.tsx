@@ -114,7 +114,7 @@ export default function TechnicalInterviewViewSwitcher({
           return;
         }
         const data = await res.json();
-        hydrateSession(data.id, data.totalPausedMs ?? 0);
+        hydrateSession(data.id, data.totalPausedMs ?? 0, data.startedAt);
       } catch (err) {
         console.error("Failed to load existing session:", err);
       }

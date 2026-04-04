@@ -62,6 +62,7 @@ model User {
   sessions          Session[]
   profile           UserProfile?
   settings          UserSettings?
+  videoUploads      VideoUpload[]
 }
 
 model VerificationToken {
@@ -200,6 +201,20 @@ model InterviewReport {
 model BehavioralPrompt {
   id            String      @id @default(cuid())
   prompt		String
+}
+
+model VideoUpload {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String @unique
+
+  createdAt DateTime @default(now())
+  analysis  Json?
 }
 
 model StoredBehavioralSession {
