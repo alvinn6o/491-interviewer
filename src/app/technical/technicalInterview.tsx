@@ -43,7 +43,12 @@ export default function TechnicalInterviewViewSwitcher({
   const [questionStatus, setQuestionStatus] = useState<boolean[]>([]);
 
   const [solutions, setSolutions] = useState<SolutionsMap>({});
-  const [rightTab, setRightTab] = useState<"results" | "solution">("results");
+  const [rightTab, setRightTab] = useState<"results" | "solution" | "hint">("results");
+
+  // Hints up to 3, progressively more specific
+  const [hints, setHints] = useState<string[]>([]);
+  const [isLoadingHint, setIsLoadingHint] = useState(false);
+  const [hintError, setHintError] = useState<string | null>(null);
 
   // Store the code written per question so we can save it on finish
   const [questionCode, setQuestionCode] = useState<string[]>([]);
@@ -147,6 +152,9 @@ export default function TechnicalInterviewViewSwitcher({
     setStderr("");
     setPageState(TIPageState.ACTIVE);
 
+    setHints([]);
+    setHintError(null);
+
     // Restore previously written code for this question if it exists
     const selectedQuestion = questions[index];
     if (selectedQuestion) {
@@ -238,6 +246,40 @@ export default function TechnicalInterviewViewSwitcher({
       setIsRunning(false);
     }
   }
+
+  async function getHint() {
+  if (!currentQuestion) return;
+  if (hints.length >= 3) return;
+  setIsLoadingHint(true);
+  setHintError(null);
+
+  try {
+    const response = await fetch("/api/hint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        questionTitle: currentQuestion.title,
+        questionDescription: currentQuestion.description,
+        code: code,
+        hintLevel: hints.length + 1,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      setHintError("Failed to generate hint. Please try again.");
+      return;
+    }
+
+    setHints((prev) => [...prev, data.hint]);
+  } catch (err) {
+    setHintError("Failed to generate hint. Please try again.");
+    console.error("Hint generation error:", err);
+  } finally {
+    setIsLoadingHint(false);
+  }
+}
 
   // Colored difficulty badge
   function DifficultyBadge({ difficulty }: { difficulty: string }) {
@@ -419,6 +461,17 @@ export default function TechnicalInterviewViewSwitcher({
               >
                 Solution
               </button>
+
+              <button
+                onClick={() => setRightTab("hint")}
+                className={`px-4 py-2 text-sm font-medium ${
+                  rightTab === "hint"
+                    ? "border-b-2 border-orange-500 text-orange-600"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                Hints {hints.length > 0 ? "(" + hints.length + "/3)" : ""}
+              </button>
             </div>
 
             {/* Test Results tab */}
@@ -493,10 +546,62 @@ export default function TechnicalInterviewViewSwitcher({
                 )}
               </div>
             )}
+            {/* Hint tab */}
+            {rightTab === "hint" && (
+              <div className="p-4 overflow-y-auto flex-1">
+                {hints.length === 0 && !isLoadingHint && (
+                  <p className="text-gray-400 text-sm mb-4">
+                    No hints yet. Click below to get your first hint.
+                  </p>
+                )}
+
+                {/* Show existing hints */}
+                <div className="space-y-3 mb-4">
+                  {hints.map((hint, idx) => (
+                    <div key={idx} className="bg-orange-50 border border-orange-200 rounded p-3">
+                      <p className="text-xs font-semibold text-orange-600 mb-1">
+                        Hint {idx + 1} of 3
+                      </p>
+                      <p className="text-sm text-gray-700">{hint}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {hintError && (
+                  <p className="text-red-500 text-xs mb-3">{hintError}</p>
+                )}
+
+                {hints.length < 3 && (
+                  <button
+                    onClick={() => void getHint()}
+                    disabled={isLoadingHint}
+                    className={`px-4 py-2 rounded text-white text-sm ${
+                      isLoadingHint
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-orange-500 hover:bg-orange-600"
+                    }`}
+                  >
+                    {isLoadingHint
+                      ? "Generating hint..."
+                      : hints.length === 0
+                      ? "Get Hint"
+                      : "Get Next Hint (" + (hints.length + 1) + "/3)"}
+                  </button>
+                )}
+
+                {hints.length >= 3 && (
+                  <p className="text-xs text-gray-400 italic">
+                    Maximum hints reached for this question.
+                  </p>
+                )}
+              </div>
+            )}
+
           </div>
           <DraggableNotepad />
         </main>
       );
+
 
     case TIPageState.END:
       return (
