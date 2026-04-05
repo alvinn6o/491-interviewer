@@ -216,6 +216,23 @@ model VideoUpload {
   analysis  Json?
 }
 
+model VideoAnalysisMark {
+  id            String   @id @default(cuid())
+  videoUploadId String
+  videoUpload   VideoUpload @relation(fields: [videoUploadId], references: [id], onDelete: Cascade)
+
+  category      String   // "posture" | "eye_contact" | "facial_expression"
+  timestampSec  Float
+  score         Float?
+  isGood        Boolean?
+  note          String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([videoUploadId])
+  @@index([category])
+}
+
 model StoredBehavioralSession {
 	id			String		 @id @default(cuid())
 	sessionId   String

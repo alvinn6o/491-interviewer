@@ -10,7 +10,6 @@ export default function VideoAnalysisPage() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [videoId, setVideoId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<any>(null);
 
@@ -34,8 +33,18 @@ export default function VideoAnalysisPage() {
         body: fd,
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Upload failed");
+      const raw = await res.text();
+
+      let data: any;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error(`Non-JSON response:\n${raw.slice(0, 800)}`);
+      }
+
+      if (!res.ok) {
+        throw new Error(JSON.stringify(data, null, 2));
+      }
 
       setVideoId(data.videoId);
       setAnalysis(data.analysis);
@@ -83,18 +92,24 @@ export default function VideoAnalysisPage() {
         </button>
 
         {error && (
-          <div className="w-full max-w-3xl rounded-md border border-red-300 bg-red-50 p-4 text-red-700">
-            <div className="font-semibold">Error</div>
-            <pre className="whitespace-pre-wrap text-sm mt-2">{error}</pre>
+          <div className="w-full max-w-4xl rounded-md border border-red-300 bg-red-50 p-4 text-red-700">
+            <div className="font-semibold text-xl mb-2">Error</div>
+            <pre className="whitespace-pre-wrap text-sm overflow-auto">
+              {error}
+            </pre>
           </div>
         )}
 
         {videoId && (
-          <div className="w-full max-w-3xl space-y-4">
-            <div className="font-semibold">Playback</div>
-            <video controls className="w-full rounded-lg border" src={`/api/videos/${videoId}`} />
+          <div className="w-full max-w-4xl space-y-4">
+            <div className="font-semibold text-xl">Playback</div>
+            <video
+              controls
+              className="w-full rounded-lg border"
+              src={`/api/videos/${videoId}`}
+            />
 
-            <div className="font-semibold">Analysis</div>
+            <div className="font-semibold text-xl">Analysis</div>
             <pre className="overflow-auto text-sm bg-gray-50 border rounded p-4">
               {JSON.stringify(analysis, null, 2)}
             </pre>

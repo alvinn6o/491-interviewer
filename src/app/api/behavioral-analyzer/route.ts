@@ -1,3 +1,5 @@
+//Alexander Tu
+
 import { NextResponse } from "next/server";
 import path from "path";
 import fs from "fs/promises";
@@ -14,15 +16,19 @@ const UPLOAD_DIR = path.join(process.cwd(), "tmp_uploads");
 
 export async function POST(req: Request) {
   try {
-    // auth user
     const session = await auth();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const user = await db.user.findUnique({ where: { email: session.user.email } });
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // parse upload
+    const user = await db.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const form = await req.formData();
     const file = form.get("video");
 
@@ -32,6 +38,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
     if (!file.type.startsWith("video/")) {
       return NextResponse.json(
         { error: `Not a video. Received type: ${file.type}` },
@@ -41,7 +48,6 @@ export async function POST(req: Request) {
 
     await fs.mkdir(UPLOAD_DIR, { recursive: true });
 
-    // save to disk
     const uuid = randomUUID();
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const storageKey = `${uuid}-${safeName}`;
@@ -50,22 +56,44 @@ export async function POST(req: Request) {
     const buf = Buffer.from(await file.arrayBuffer());
     await fs.writeFile(videoPath, buf);
 
-    // analyze via python
     const scriptPath = path.join(process.cwd(), "scripts", "analyze_video.py");
-    const PYTHON_CMD = process.platform === "win32" ? "py" : "python3";
+
+    const PYTHON_CMD =
+      process.platform === "win32"
+        ? path.join(process.cwd(), "venv310", "Scripts", "python.exe")
+        : path.join(process.cwd(), "venv310", "bin", "python");
 
     let analysis: any = null;
+
     try {
-      const { stdout } = await execFileAsync(PYTHON_CMD, [scriptPath, videoPath], {
-        maxBuffer: 20 * 1024 * 1024,
-      });
+      const { stdout, stderr } = await execFileAsync(
+        PYTHON_CMD,
+        [scriptPath, videoPath],
+        { maxBuffer: 20 * 1024 * 1024 }
+      );
+
+      if (stderr?.trim()) {
+        console.error("Python stderr:", stderr);
+      }
+
       analysis = JSON.parse(stdout);
-    } catch (e) {
-      // If analysis fails, we still store the upload; return analysis error info
-      analysis = { error: "analysis_failed" };
+    } catch (e: any) {
+      console.error("Python analysis failed:", e);
+
+      return NextResponse.json(
+        {
+          error: "analysis_failed",
+          detail: e?.message ?? String(e),
+          stderr: e?.stderr ?? null,
+          stdout: e?.stdout ?? null,
+          scriptPath,
+          pythonCmd: PYTHON_CMD,
+          videoPath,
+        },
+        { status: 500 }
+      );
     }
 
-    // create db row
     const row = await db.videoUpload.create({
       data: {
         userId: user.id,
