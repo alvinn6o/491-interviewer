@@ -11,6 +11,9 @@
 //Date: 2/19/2026
 //Change api point "store" to "end"
 
+//Date: 4/6/2026
+//test volume analysis
+
 import type { FeedbackItem } from "./feedbackItem";
 import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
@@ -20,7 +23,6 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
 
     const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
     const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
-
 
     const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
 
@@ -172,6 +174,22 @@ export async function FindPausedSession() {
 export async function ResumeSession(sessionId: string) {
     const response = await fetch(`/api/behavioral/resume/${sessionId}`, {
         method: "POST"
+    });
+
+    return response.json();
+}
+
+export async function AnalyzeAudio(blob: Blob) {
+    const formData = new FormData();
+
+    formData.append(
+        "audio",
+        blob
+    );
+
+    const response = await fetch(`/api/behavioral/analyze`, {
+        method: "POST",
+        body: formData
     });
 
     return response.json();

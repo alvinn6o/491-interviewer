@@ -74,7 +74,7 @@ async function AverageFeedbackItems(base_items: any[], sessionId: string) {
             feedback_items.forEach(
                 (item: any) => {
 
-                    if (item.category && item.score) {
+                    if (item.category != null && item.score != null) {
 
                         const key = item.category;
                         const value = item.score;
@@ -93,20 +93,20 @@ async function AverageFeedbackItems(base_items: any[], sessionId: string) {
 
 
     //set the average values as the true scores of the final items
-    const final_items: any[] = base_items;
+    //const final_items: any[] = base_items;
 
-    final_items.forEach(
+    base_items.forEach(
         (item: any) => {
 
             const key = item.category;
 
-            if (totals[key] && counts[key]) {
+            if (totals[key] != null && counts[key] != null) {
                 item.score = totals[key] / counts[key];
             }
         }
     )
 
-    return final_items;
+    return base_items;
 }
 
 /*

@@ -7,7 +7,7 @@
 //Date: 2/19/2025
 //Move to end.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
@@ -37,7 +37,13 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     const [video, setVideo] = useState<Blob | null>(null);
     const [audio, setAudio] = useState<Blob | null>(null);
 
+    const effectHasRun = useRef(false);
+
     useEffect(() => { //Call once on page state load
+
+        //Prevent multiple runs during dev mode
+        if (effectHasRun.current) return;
+        effectHasRun.current = true;
 
         console.log("CALLING USE EFFECT FOR BI END");
 
@@ -68,7 +74,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                 else {
 
                     const result = await SendAudioVideoToServer(sessionId, audioData, videoData); //await for the audio data to be uploaded
-                    const updatedSession = await EndSession(sessionId);   //update session with completed state
+                    await EndSession(sessionId);   //update session with completed state
 
                     console.log("Completed audio upload and session end.")
 

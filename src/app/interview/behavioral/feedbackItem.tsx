@@ -27,7 +27,7 @@ export function AnalysisResultToFBItems(analysisJSON: string)
 {
     const analysisItems: any[] = JSON.parse(analysisJSON);
 
-    const fbItems: FeedbackItem[] = new Array(analysisItems.length);
+    const fbItems: FeedbackItem[] = [];
 
     analysisItems.forEach((element) => {
 

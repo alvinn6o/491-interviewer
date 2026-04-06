@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ProcessAudioToText, ProcessTextToTokens } from "./audioProcess";
 import { db } from "~/server/db";
+import { TestAnalyzeVolume } from "../analyze/analyze";
 
 export async function POST(req: NextRequest) {
 
@@ -20,6 +21,10 @@ export async function POST(req: NextRequest) {
             { status: 400 }
         );
     }
+
+    //TODO: replace with full analysis
+    //for now, test volume, output to console
+    await TestAnalyzeVolume(audio);
 
 
     //Process Audio
