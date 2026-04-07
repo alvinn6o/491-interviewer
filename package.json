@@ -34,6 +34,7 @@
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
     "audio-context": "^1.0.3",
+    "audio-decode": "^3.8.1",
     "axios": "^1.13.4",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",

@@ -2,15 +2,77 @@
 // Date: 4/6/2026
 //Check the volume of the audio blob over time
 
-import { decode } from 'wav-decoder';
-import { FFmpeg } from '@ffmpeg/ffmpeg';
+//import { decode } from 'wav-decoder';
+//import { FFmpeg } from '@ffmpeg/ffmpeg';
+//import { AudioContext } from 'web-audio-api';
+import decode from 'audio-decode';
 
-//userAudio.tsx enforces audio recording as webm format
-//to ensure consistency across browsers
+
+//Decode the blob and extract the volume from each sample
 
 //INPUT: audio blob in webm format (from userAudio.tsx)
 //OUTPUT: array of volumes at each sample in the data
 
+export async function GetVolume(blob: Blob) {
+
+    //Array of amplitudes from -1 to 1 of the volume of each sample
+    const decodedData = await DecodeAudio(blob);
+
+    //extract the first channel
+    //assume there is only one channel in the audio
+    //const rawPCM = decodedData.getChannelData(0);
+    const rawPCM = decodedData.channelData[0];
+
+    //Map each sample's raw amplitude to its abs and store in an arrayBuffer
+    if (rawPCM != undefined) {
+        const volumes = rawPCM.map((sample: any) => Math.abs(sample));
+
+        //average volumes for each second of audio
+        const sampleRate = decodedData.sampleRate;
+        const averageVolumesPerSecond = AverageVolume(volumes, sampleRate)
+
+        //1. average volumes for each second of audio
+        //2. locate sections of audio of being quiet or silent for more than 1s
+        //3. provide analysis feedback based on frequency and proportion of silent sections over the whole audio
+
+        //for now, simply return the average audio sample
+        return averageVolumesPerSecond;
+    }
+
+    //fail
+    return [0];
+}
+
+//Convert blob into decoded audio data
+//using audio-decode package
+async function DecodeAudio(blob: Blob) {
+
+    /*
+    //move data from blob to array buffer for processing
+    const arrayBuffer = await blob.arrayBuffer();
+
+    //use audio context to decode the audio into viewable samples
+    const audioCtx = new AudioContext();
+
+    const decodedData = await audioCtx.decodeAudioData(arrayBuffer);*/
+
+    const arrayBuffer = await blob.arrayBuffer();
+    const decodedData = await decode(arrayBuffer);
+        
+    return decodedData;
+}
+
+//find average volume of each second of audio data
+function AverageVolume(volumes: Float32Array<ArrayBuffer>, sampleRate: number) {
+    //TODO:
+
+    return [1];
+}
+
+//DEPRECATED:
+//INPUT: audio blob in webm format (from userAudio.tsx)
+//OUTPUT: array of volumes at each sample in the data
+/*
 export async function GetVolumeWEBM(blob: Blob) {
     //TODO: Error: ffmpeg.wasm does not support nodejs, find alternatie solution
 
@@ -58,7 +120,7 @@ export async function GetVolumeWEBM(blob: Blob) {
 
     return volumeData;
 }
-
+*/
 //Analyze the volume over time and provide
 //feedback about the volume
 
