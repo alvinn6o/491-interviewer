@@ -67,6 +67,7 @@ model User {
   profile           UserProfile?
   settings          UserSettings?
   videoUploads      VideoUpload[]
+  jobApplications   JobApplication[]
 }
 
 model VerificationToken {
@@ -244,9 +245,60 @@ model StoredBehavioralSession {
 	feedback	Json?
 }
 
+
+// Job Tracker
+
+
+model JobApplication {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        String
+  position       String
+  jobDescription String?           @db.Text
+  jobUrl         String?
+  salaryMin      Int?
+  salaryMax      Int?
+  location       String?
+  status         ApplicationStatus @default(SAVED)
+  notes          String?           @db.Text
+  appliedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  statusHistory  StatusHistory[]
+
+  @@index([userId])
+}
+
+model StatusHistory {
+  id               String         @id @default(cuid())
+  jobApplicationId String
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+  fromStatus       String
+  toStatus         String
+  note             String?
+  changedAt        DateTime       @default(now())
+
+  @@index([jobApplicationId])
+}
+
 // ============================================
 // Enums
 // ============================================
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  PHONE_SCREEN
+  TECHNICAL
+  ONSITE
+  OFFER
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  GHOSTED
+}
+
 
 enum InterviewType {
   BEHAVIORAL
