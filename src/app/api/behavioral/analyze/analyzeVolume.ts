@@ -26,7 +26,8 @@ export async function GetVolume(blob: Blob) {
 
         //average volumes for each second of audio
         const sampleRate = decodedData.sampleRate;
-        const averageVolumesPerSecond = AverageVolume(volumes, sampleRate, 0.5)
+        const sampleLengthSeconds = 0.5;
+        const averageVolumesPerSecond = AverageVolume(volumes, sampleRate, sampleLengthSeconds)
 
         //1. average volumes for each second of audio
         //2. locate sections of audio of being quiet or silent for more than 1s
@@ -35,7 +36,9 @@ export async function GetVolume(blob: Blob) {
         //for now, simply return the average audio sample
         //return averageVolumesPerSecond;
 
-        return [AnalyzeVolume(averageVolumesPerSecond)];
+        //TODO: returned as array due to other end expected format
+        //Update as proper feedbackItem instead
+        return [AnalyzeVolume(averageVolumesPerSecond, sampleLengthSeconds)];
     }
 
     //fail
@@ -95,7 +98,15 @@ function AverageVolume(volumes: Float32Array<ArrayBuffer>, sampleRate: number, s
 
 //OUTPUT: numerical score based on number of pauses from 1 to 5
 
-async function AnalyzeVolume(averageVolumes: number[]) {
+enum FeedbackMessage {
+    NoTalk = "You didn't talk at all during the session. Is your mic working?",
+    LongPause = "Don't pause for too long inbetween sentences.",
+    ShortTalk = "Try talking for longer during throughout the session.",
+    LongPreTalk = "Make sure to start the session promptly after clicking start!",
+    LongPostTalk = "Don't wait too long to end the interview after finishing."
+}
+
+async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: number) {
 
     const talkingVolumeThreshold = 0.001;
 
@@ -147,26 +158,109 @@ async function AnalyzeVolume(averageVolumes: number[]) {
     let talkSamples = 0;
     let postTalkSamples = sampleSections[sampleSections.length - 1];
 
+    //In case last section is talk and not pause
+    if (sampleSections.length - 1 % 2 == 1) {
+        postTalkSamples = 0;
+    }
+
 
     //alternate between pause and talk
-    //assume we start with talk
-    for (let i = 1; i < sampleSections.length - 1; i++) {
+    //assume we start with talk at 1
+    //we may not end with pause, account for that
+    for (let i = 1; i < sampleSections.length; i++) {
+
+        //talk samples are odd
         if (i % 2 == 1) {
             talkSamples += sampleSections[i];
         }
-        else {
+        //pause samples are even
+        //dont parse the last sample if it is even
+        else if (i != sampleSections.length - 1) {
             pauseSamples += sampleSections[i];
         }
 
     }
 
+    //array to hold feedback items including score and notes
+    const feedbackItems: any[] = [];
+
+    //Calculate score based on proportion of talk samples
+    //to pause + talk sample count
     const totalValidSamples = averageVolumes.length - preTalkSamples - postTalkSamples;
-    const score = (pauseSamples + talkSamples) / totalValidSamples;
+    let score = 0;
+
+    //In case there are 0 pause or talk samples, avoid dividing by zero
+    if (totalValidSamples != 0) {
+        score = talkSamples / totalValidSamples;
+    }
+    else {
+        const item = { category: "Notes", content: FeedbackMessage.NoTalk }
+        feedbackItems.push(item);
+    }
 
     console.log("pre: " + preTalkSamples + "pause: " + pauseSamples + "talk: " + talkSamples + "post: " + postTalkSamples + " score: " + score);
 
-    //TODO: score by threshold, what % of the interview should they be talking at least? 
-    //TODO: penalty for unusually large pause sections
+    //Max score if talking for at least 60% of valid samples
+    const maxScoreThreshold = 0.60;
+    let normalizedScore = score / maxScoreThreshold;
 
-    return score;
+
+
+
+    //Apply penalty for any unsually large pause sections (excluding start and end)
+    const maxPauseSectionSeconds = 10;
+    const penaltyAmount = 0.1;
+
+    for (let i = 1; i < sampleSections.length - 1; i++) {
+        //even is pause section
+        if (i % 2 == 0) {
+
+            const pauseLength = sampleSections[i] * sampleLengthSeconds;
+
+            if (pauseLength > maxPauseSectionSeconds) {
+
+                const item = { category: "Notes", content: FeedbackMessage.LongPause}
+                feedbackItems.push(item);
+
+                normalizedScore -= penaltyAmount;
+                break;
+            }
+        }
+    }
+
+
+    //Apply penalty for unusually short total talking sections 
+    const minTalkingTime = 20;
+    const totalTalkingTime = talkSamples * sampleLengthSeconds;
+
+    if (totalTalkingTime < minTalkingTime) {
+        const item = { category: "Notes", content: FeedbackMessage.ShortTalk}
+        feedbackItems.push(item);
+
+        normalizedScore -= penaltyAmount;
+    }
+
+    //keep in range 0 to 1 then mult by 5
+    const normalizedScoreClamped = Math.max(0, Math.min(1, normalizedScore)) * 5;
+    feedbackItems.push({ category: "Volume", score: normalizedScoreClamped });
+
+    //Add notes if pre or post talk is too long
+
+    const maxPrePauseTime = 15;
+    const preTalkTime = preTalkSamples * sampleLengthSeconds;
+
+    if (preTalkTime > maxPrePauseTime) {
+        const item = { category: "Notes", content: FeedbackMessage.LongPreTalk}
+        feedbackItems.push(item);
+    }
+
+    const maxPostTalkTime = 10;
+    const postTalkTime = postTalkSamples * sampleLengthSeconds;
+
+    if (postTalkTime > maxPostTalkTime) {
+        const item = { category: "Notes", content: FeedbackMessage.LongPostTalk }
+        feedbackItems.push(item);
+    }
+
+    return feedbackItems;
 }

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     //TODO: replace with full analysis
     //for now, test volume, output to console
-    await TestAnalyzeVolume(audio);
+    const audioFeedbackItems = await TestAnalyzeVolume(audio);
 
 
     //Process Audio
@@ -50,14 +50,9 @@ export async function POST(req: NextRequest) {
     const tokensByCount = ProcessTextToTokens(text);
 
 
-    //TODO: send processed results to Behavioral Analysis
-
-    //TODO: test items in place of actual data
-    const test_items = [
-        { category: "Notes", content: text, score: 0 }
-
-    ];
+    //TODO: combine audioFeedbackItems with other feedbackItems
+    
 
     //send to behavioralSerice.tsx
-    return NextResponse.json(test_items);
+    return NextResponse.json(audioFeedbackItems);
 }

@@ -4,15 +4,7 @@
 import { GetVolume } from "./analyzeVolume";
 
 export async function TestAnalyzeVolume(blob: Blob) {
-    const volumeDataArray = await GetVolume(blob);
+    const feedbackItems = await GetVolume(blob);
 
-    let msg = "Volume: ";
-
-    volumeDataArray.forEach(
-        (volume) => {
-            msg += ", " + volume;
-        }
-    )
-
-    console.log(msg);
+    //TODO: send feedbackItems back to user
 }
