@@ -8,6 +8,10 @@
 // Date: 3/17/2026
 // Added StoredBehavioralSession
 
+// Alexander Tu
+// Date: 3/7/2026
+// Added VideoUpload
+
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -78,24 +82,23 @@ model VerificationToken {
 // ============================================
 
 model UserProfile {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  firstName       String?
-  lastName        String?
-  phoneNumber     String?
-  emailAddress    String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  firstName    String?
+  lastName     String?
+  phoneNumber  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  emailAddress String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserSettings {
-  id                    String      @id @default(cuid())
-  userId                String      @unique
-  prefersDarkMode       Boolean     @default(false)
-  languagePref          String?     @default("JavaScript")
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  prefersDarkMode Boolean @default(false)
+  languagePref    String? @default("JavaScript")
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -107,13 +110,13 @@ model UserSettings {
 model ResumeAnalysis {
   id             String   @id @default(cuid())
   userId         String
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resumeName     String
   jobDescription String?
   atsScore       Int?
   matchScore     Float?
   feedback       Json
   analyzedAt     DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -123,16 +126,16 @@ model ResumeAnalysis {
 // ============================================
 
 model InterviewSession {
-  id            String              @id @default(cuid())
-  userId        String
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type          InterviewType
-  status        SessionStatus       @default(IN_PROGRESS)
-  startedAt     DateTime            @default(now())
-  completedAt   DateTime?
-  overallScore  Float?
-  feedback      Json?
-  responses     InterviewResponse[]
+  id           String              @id @default(cuid())
+  userId       String
+  type         InterviewType
+  status       SessionStatus       @default(IN_PROGRESS)
+  startedAt    DateTime            @default(now())
+  completedAt  DateTime?
+  overallScore Float?
+  feedback     Json?
+  responses    InterviewResponse[]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   savedData		  StoredBehavioralSession[]
   prompt		    String?
@@ -149,58 +152,86 @@ model InterviewSession {
 model InterviewResponse {
   id         String           @id @default(cuid())
   sessionId  String
-  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question   String
   answer     String
   score      Float?
   feedback   String?
   answeredAt DateTime         @default(now())
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
 }
 
 model TechnicalQuestion {
-  id           String   @id
-  slug         String   @unique // ex: problem name in url "3sum"
-  title        String           // ex: 9. 3Sum
-  description  String   @db.Text
+  id           String     @id
   difficulty   String
   category     String
-  starterCode  Json
-  functionName String           //ex: string("twoSum")
-  params       Json
+  createdAt    DateTime   @default(now())
+  description  String
+  functionName String
   outputType   String
-  createdAt    DateTime @default(now())
-
+  params       Json
+  slug         String     @unique
+  starterCode  Json
+  title        String
   testCases    TestCase[]
 }
 
 model TestCase {
-  id             String   @id @default(cuid())
-  input          Json     //Input params.. ex: {"nums": [2, 7, 11, 15]}
+  id             String            @id @default(cuid())
+  input          Json
   expectedOutput String
-  isHidden       Boolean  @default(false)
-
-  //Foreign Key
+  isHidden       Boolean           @default(false)
   problemId      String
   problem        TechnicalQuestion @relation(fields: [problemId], references: [id], onDelete: Cascade)
 }
 
 model InterviewReport {
-  id            String      @id @default(cuid())
-  userId        String
-  sessionId     String
-  summary       String
-  isFavorite    Boolean     @default(false)
-  createdAt     DateTime    @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  sessionId  String
+  summary    String
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
 
   @@index([userId])
   @@index([sessionId])
 }
 
 model BehavioralPrompt {
-  id            String      @id @default(cuid())
-  prompt		String
+  id     String @id @default(cuid())
+  prompt String
+}
+
+model VideoUpload {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String @unique
+
+  createdAt DateTime @default(now())
+  analysis  Json?
+}
+
+model VideoAnalysisMark {
+  id            String   @id @default(cuid())
+  videoUploadId String
+  videoUpload   VideoUpload @relation(fields: [videoUploadId], references: [id], onDelete: Cascade)
+
+  category      String   // "posture" | "eye_contact" | "facial_expression"
+  timestampSec  Float
+  score         Float?
+  isGood        Boolean?
+  note          String?
+
+  createdAt     DateTime @default(now())
+
+  @@index([videoUploadId])
+  @@index([category])
 }
 
 model VideoUpload {
