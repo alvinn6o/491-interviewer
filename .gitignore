@@ -66,3 +66,6 @@ obj
 
 #video uploads
 tmp_uploads/
+
+#virtual environment
+venv/
