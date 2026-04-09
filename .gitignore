@@ -69,3 +69,4 @@ tmp_uploads/
 
 #virtual environment
 venv/
+venv310/
