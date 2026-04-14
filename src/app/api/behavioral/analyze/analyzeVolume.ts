@@ -3,6 +3,9 @@
 //Check the volume of the audio blob over time
 
 import decode from 'audio-decode';
+import type { AnalysisItem } from "./analysisItem";
+import { CreateAnalysisItemScore, CreateAnalysisItemContent } from "./analysisItem";
+import type { VolumeAnalysisResponse } from "./analysisResponse";
 
 
 //Decode the blob and extract the volume from each sample
@@ -33,16 +36,10 @@ export async function GetVolume(blob: Blob) {
         //2. locate sections of audio of being quiet or silent for more than 1s
         //3. provide analysis feedback based on frequency and proportion of silent sections over the whole audio
 
-        //for now, simply return the average audio sample
-        //return averageVolumesPerSecond;
-
-        //TODO: returned as array due to other end expected format
-        //Update as proper feedbackItem instead
-        return [AnalyzeVolume(averageVolumesPerSecond, sampleLengthSeconds)];
+        return AnalyzeVolume(averageVolumesPerSecond, sampleLengthSeconds);
     }
 
-    //fail
-    return [0];
+    return AnalyzeVolume([0], 0.5);
 }
 
 //Convert blob into decoded audio data
@@ -182,7 +179,7 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
     }
 
     //array to hold feedback items including score and notes
-    const feedbackItems: any[] = [];
+    const analysisItems: AnalysisItem[] = [];
 
     //Calculate score based on proportion of talk samples
     //to pause + talk sample count
@@ -194,8 +191,8 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
         score = talkSamples / totalValidSamples;
     }
     else {
-        const item = { category: "Notes", content: FeedbackMessage.NoTalk }
-        feedbackItems.push(item);
+        const item = CreateAnalysisItemContent("Notes", FeedbackMessage.NoTalk); 
+        analysisItems.push(item);
     }
 
     console.log("pre: " + preTalkSamples + "pause: " + pauseSamples + "talk: " + talkSamples + "post: " + postTalkSamples + " score: " + score);
@@ -204,11 +201,8 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
     const maxScoreThreshold = 0.60;
     let normalizedScore = score / maxScoreThreshold;
 
-
-
-
     //Apply penalty for any unsually large pause sections (excluding start and end)
-    const maxPauseSectionSeconds = 10;
+    const maxPauseSectionSeconds = 5;
     const penaltyAmount = 0.1;
 
     for (let i = 1; i < sampleSections.length - 1; i++) {
@@ -219,8 +213,8 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
 
             if (pauseLength > maxPauseSectionSeconds) {
 
-                const item = { category: "Notes", content: FeedbackMessage.LongPause}
-                feedbackItems.push(item);
+                const item = CreateAnalysisItemContent("Notes", FeedbackMessage.LongPause); 
+                analysisItems.push(item);
 
                 normalizedScore -= penaltyAmount;
                 break;
@@ -234,15 +228,16 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
     const totalTalkingTime = talkSamples * sampleLengthSeconds;
 
     if (totalTalkingTime < minTalkingTime) {
-        const item = { category: "Notes", content: FeedbackMessage.ShortTalk}
-        feedbackItems.push(item);
+        const item = CreateAnalysisItemContent("Notes", FeedbackMessage.ShortTalk); 
+        analysisItems.push(item);
 
         normalizedScore -= penaltyAmount;
     }
 
     //keep in range 0 to 1 then mult by 5
     const normalizedScoreClamped = Math.max(0, Math.min(1, normalizedScore)) * 5;
-    feedbackItems.push({ category: "Volume", score: normalizedScoreClamped });
+    const volumeItem = CreateAnalysisItemScore("Volume", normalizedScoreClamped);
+    analysisItems.push(volumeItem);
 
     //Add notes if pre or post talk is too long
 
@@ -250,17 +245,24 @@ async function AnalyzeVolume(averageVolumes: number[], sampleLengthSeconds: numb
     const preTalkTime = preTalkSamples * sampleLengthSeconds;
 
     if (preTalkTime > maxPrePauseTime) {
-        const item = { category: "Notes", content: FeedbackMessage.LongPreTalk}
-        feedbackItems.push(item);
+        const item = CreateAnalysisItemContent("Notes", FeedbackMessage.LongPreTalk);
+        analysisItems.push(item);
     }
 
     const maxPostTalkTime = 10;
     const postTalkTime = postTalkSamples * sampleLengthSeconds;
 
     if (postTalkTime > maxPostTalkTime) {
-        const item = { category: "Notes", content: FeedbackMessage.LongPostTalk }
-        feedbackItems.push(item);
+        const item = CreateAnalysisItemContent("Notes", FeedbackMessage.LongPostTalk);
+        analysisItems.push(item);
     }
 
-    return feedbackItems;
+    console.log("Final score: " + normalizedScoreClamped);
+
+    const volumeAnalysisResponse: VolumeAnalysisResponse = {
+        feedbackItems: analysisItems,
+        volume: averageVolumes
+    }
+
+    return volumeAnalysisResponse;
 }

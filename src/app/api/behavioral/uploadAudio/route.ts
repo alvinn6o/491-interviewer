@@ -26,7 +26,6 @@ export async function POST(req: NextRequest) {
     //for now, test volume, output to console
     const audioFeedbackItems = await TestAnalyzeVolume(audio);
 
-
     //Process Audio
     let text = await ProcessAudioToText(audio);
 

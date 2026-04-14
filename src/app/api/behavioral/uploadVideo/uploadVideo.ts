@@ -11,11 +11,11 @@ export async function GetVideoFeedback(videos: Blob) {
     //TODO: send video to facial analyis service
 
     const test_items = [
-        { category: "Eye Contact", content: "", score: 1 },
-        { category: "Confidence", content: "", score: 2 },
-        { category: "Quality of Answers", content: "", score: 3 },
-        { category: "Sociability", content: "", score: 4 },
-        { category: "Clear Speach", content: "", score: 5 },
+        { category: "Eye Contact", score: 1 },
+        { category: "Confidence", score: 2 },
+        { category: "Quality of Answers", score: 3 },
+        { category: "Sociability", score: 4 },
+        { category: "Clear Speach", score: 5 },
 
     ];
 

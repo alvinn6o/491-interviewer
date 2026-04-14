@@ -17,13 +17,16 @@
 import type { FeedbackItem } from "./feedbackItem";
 import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
+import type { AnalysisResponse, VolumeAnalysisResponse } from "../../api/behavioral/analyze/analysisResponse";
 
 //Wrapper function to simplify calls to behavioral service
 export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
 
-    const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
-    const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
+    const audioAnalysisResponse = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoAnalysisResponse = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
 
+    const audioFeedback = await AudioAnalysisToFBItem(audioAnalysisResponse);
+    const videoFeedback = await VideoAnalysisToFBItem(videoAnalysisResponse);
     const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
 
     const formData = new FormData();
@@ -33,12 +36,31 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
         JSON.stringify(allFeedback)
     );
 
-    const response = await fetch(`/api/behavioral/setFeedback/${sessionId}`, {
+    //save the feedback items in the DB
+    await fetch(`/api/behavioral/setFeedback/${sessionId}`, {
         method: "POST",
         body: formData
     });
 
+    //return the data to the user
     return allFeedback;
+}
+
+async function AudioAnalysisToFBItem(audioAnalysisResponse: Response) {
+    const audioAnalysisData = await audioAnalysisResponse.json();
+    const volumeAnalysisData = audioAnalysisData.volumeAnalysis;
+    const volumeFBItems: FeedbackItem[] = AnalysisResultToFBItems(
+        JSON.stringify(volumeAnalysisData.feedbackItems)
+    );
+
+    return volumeFBItems;
+}
+
+async function VideoAnalysisToFBItem(videoAnalysisResponse: Response) {
+    const videoResponseData = await videoAnalysisResponse.json();
+    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(videoResponseData));
+
+    return fbItems;
 }
 
 async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
@@ -66,14 +88,16 @@ async function SendToServer(sessionId: string, data: Blob, apiURL: string, formD
 
     console.log("got response from " + apiURL);
 
+    return response;
+
     //Convert json to FeedbackItem objects
-    const responseData = await response.json();
+    /*const responseData = await response.json();
     const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(responseData));
 
     console.log("convert to fbItems from  " + apiURL);
 
     //send to end.tsx
-    return fbItems;
+    return fbItems;*/
 }
 
 

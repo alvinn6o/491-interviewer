@@ -11,12 +11,11 @@ import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
-import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
 import { SendAudioVideoToServer, EndSession, PauseSession } from "./behavioralService";
 
-//TODO: have to refactor to combine audio and video data into one call
+
 export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, usePause }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     usePause: boolean;
@@ -26,7 +25,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
 }) {
     //Helps set useState typing
     const test_items = [
-        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
+        { key: "None", content: "Eye Contact", score: 1 }
     ];
 
     //Modified for UC 1 to include loading and error states
@@ -97,15 +96,15 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     },
 
     [])
-
+    
     const RestartInterviewButton = async () => {
         changeState(BIPageState.START);
     };
 
     const DataDisplay = ({ data }: { data: FeedbackItem[] }) => {
 
-        const notes = data.filter(item => item.key === FeedbackCategory.NOTES);
-        const otherData = data.filter(item => item.key !== FeedbackCategory.NOTES);
+        const notes = data.filter(item => item.key === "Notes");
+        const otherData = data.filter(item => item.key !== "Notes");
 
         const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
 
@@ -135,7 +134,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                     <div className="flex flex-col">
                         {firstHalf?.map(
 
-                            (item, i) => (
+                            (item: FeedbackItem, i) => (
                                 <div key={`${i}`} className="p-1">
                                     <h3>{item.key}</h3>
                                     <span>{item.score.toString()}</span>
@@ -146,7 +145,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                     <div className="flex flex-col">
                         {secondHalf?.map(
 
-                            (item, i) => (
+                            (item : FeedbackItem, i) => (
                                 <div key={`${i}`} className="p-1">
                                     <h3>{item.key}</h3>
                                     <span>{item.score.toString()}</span>
@@ -159,10 +158,29 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
 
         };
 
+        const NotesList = ({ data }: { data: FeedbackItem[] }) => {
+
+            return (
+                <div className="flex flex-row gap-4 p-2">
+                    <div className="flex flex-col">
+                        {data?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <span>* {item.content}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                </div>
+            );
+
+        };
+
         return (
             <div className="w-3/4 flex flex-row gap-4">
                 <DisplayBox title="Notes">
-                    {notes[0]?.content}
+                    <NotesList data={notes} />
                 </DisplayBox>
 
                 <DisplayBox title="Statistics">

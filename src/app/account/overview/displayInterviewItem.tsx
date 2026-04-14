@@ -180,6 +180,25 @@ function DisplayFeedback({ feedback }: { feedback: any[] }) {
             )
         };
 
+        const NotesList = ({ data }: { data: any[] }) => {
+
+            return (
+                <div className="flex flex-row gap-4 p-2">
+                    <div className="flex flex-col">
+                        {data?.map(
+
+                            (item, i) => (
+                                <div key={`${i}`} className="p-1">
+                                    <span>* {item.content}</span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                </div>
+            );
+
+        };
+
         const FeedbackList = ({ data }: { data: any[] }) => {
 
             const splitFeedback = (data: any[]) => {
@@ -224,7 +243,7 @@ function DisplayFeedback({ feedback }: { feedback: any[] }) {
         return (
             <div >
                 <DisplayBox title="Notes">
-                    {notes[0]?.content}
+                    <NotesList data={notes}/>
                 </DisplayBox>
                 <br></br>
                 <DisplayBox title="Statistics">

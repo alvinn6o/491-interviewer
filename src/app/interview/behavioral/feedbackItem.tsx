@@ -4,19 +4,8 @@
 //Date: 1/31/2026
 //Separate into own file, conversion functions
 
-export enum FeedbackCategory {
-    NONE = "None",
-    NOTES = "Notes",
-    EYE_CONTACT = "Eye Contact",
-    CONFIDENCE = "Confidence",
-    QUALITY_OF_ANSWERS = "Quality of Answers",
-    SOCIABILITY = "Sociability",
-    CLEAR_SPEECH = "Clear Speech"
-
-}
-
 export type FeedbackItem = {
-    key: FeedbackCategory,
+    key: string,
     content: string,
     score: number
 }
@@ -31,7 +20,13 @@ export function AnalysisResultToFBItems(analysisJSON: string)
 
     analysisItems.forEach((element) => {
 
-        let fbItem: FeedbackItem = CreateFeedbackItem(element.category, element.content, element.score);
+        let category = element.category;
+        let content = element.content;
+        let score = element.score;
+
+        console.log("Create FBItem from analysisItem: " + element);
+
+        let fbItem: FeedbackItem = CreateFeedbackItem(category, content, score);
         fbItems.push(fbItem);
 
     });
@@ -41,7 +36,9 @@ export function AnalysisResultToFBItems(analysisJSON: string)
 
 export function CreateFeedbackItem(acategory: string, acontent: string, ascore: number)
 {
-    let category = acategory as FeedbackCategory;
+    let category = acategory;
+
+    console.log("Created FBItem with category " + category + " and content " + acontent + " and score " + ascore);
 
     const fbItem: FeedbackItem = { key: category, content: acontent, score: ascore };
 
