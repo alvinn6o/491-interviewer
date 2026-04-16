@@ -48,6 +48,12 @@ export function GetFillerAnalysis(tokens: Record<string, number>) {
 
 function GetScoreItem(fillerAmount: number, nonFillerAmount: number) {
 
+    const total = fillerAmount + nonFillerAmount;
+
+    //avoid divide by zero
+    if (total == 0)
+        return CreateAnalysisItemScore("Word Choice", 0);
+
     const ratio = fillerAmount / (nonFillerAmount + fillerAmount);
 
     //10% filler words = 0 score

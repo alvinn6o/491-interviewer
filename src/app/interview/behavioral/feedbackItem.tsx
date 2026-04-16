@@ -26,10 +26,11 @@ export function AnalysisResultToFBItems(analysisJSON: string)
         let category = element.category;
         let content = element.content;
         let score = element.score;
+        let graph = element.graph;
 
         console.log("Create FBItem from analysisItem: " + element);
 
-        let fbItem: FeedbackItem = CreateFeedbackItem(category, content, score);
+        let fbItem: FeedbackItem = CreateFeedbackItem(category, content, score, graph);
         fbItems.push(fbItem);
 
     });
@@ -37,13 +38,13 @@ export function AnalysisResultToFBItems(analysisJSON: string)
     return fbItems;
 }
 
-export function CreateFeedbackItem(acategory: string, acontent?: string, ascore?: number)
+export function CreateFeedbackItem(acategory: string, acontent?: string, ascore?: number, agraph?: any[])
 {
     let category = acategory;
 
     console.log("Created FBItem with category " + category + " and content " + acontent + " and score " + ascore);
 
-    const fbItem: FeedbackItem = { key: category, content: acontent, score: ascore };
+    const fbItem: FeedbackItem = { key: category, content: acontent, score: ascore, graph: agraph };
 
     return fbItem   
 }

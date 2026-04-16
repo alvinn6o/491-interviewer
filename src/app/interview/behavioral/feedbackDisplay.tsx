@@ -118,7 +118,7 @@ function DisplayContentFeedback({ items }: { items: FeedbackItem[] }) {
         <div>
             {
                 Object.entries(contentItemsByKey).map(([key, itemsByKey]) => (
-                    <DisplayBox title={key}>
+                    <DisplayBox title={key} key={key}>
                         <ContentDisplay items={itemsByKey} />
                     </DisplayBox> )
                 )

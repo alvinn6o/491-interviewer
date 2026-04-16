@@ -5,7 +5,8 @@
 export type AnalysisItem = {
     category: string,
     content?: string,
-    score?: number
+    score?: number,
+    graph?: any[]
 }
 
 export function CreateAnalysisItemContent(category: string, content: string) {
@@ -15,5 +16,10 @@ export function CreateAnalysisItemContent(category: string, content: string) {
 
 export function CreateAnalysisItemScore(category: string, score: number) {
     const item: AnalysisItem = { category: category, score: score }
+    return item;
+}
+
+export function CreateAnalysisItemGraph(category: string, graph: any[]) {
+    const item: AnalysisItem = { category: category, graph: graph }
     return item;
 }
