@@ -1,18 +1,16 @@
 ﻿//Author: Brandon Christian
-//Date: 1-30-2026
-//Handle API or DB requests between the user and the server
+//Date: 1-30-2026-1/31/2026
+//Handles API or DB requests between the user and the server
+//and send result to client
 
-//Date: 1-31-2026
-//Send result to client
-
-//Date: 2/17/2026
+//Date: 2/17/2026-2/19/2026
 //GET prompt from DB
-
-//Date: 2/19/2026
 //Change api point "store" to "end"
 
-//Date: 4/6/2026
-//test volume analysis
+//Date: 4/6/2026-4/14/2026
+//Volume analysis
+//esponse feedback reformat
+
 
 import type { FeedbackItem } from "./feedbackItem";
 import { CombineFeedback } from "./feedbackItem";
@@ -47,8 +45,8 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
 }
 
 async function AudioAnalysisToFBItem(audioAnalysisResponse: Response) {
-    const audioAnalysisData = await audioAnalysisResponse.json();
-    const volumeAnalysisData = audioAnalysisData.volumeAnalysis;
+    const audioAnalysisData : AnalysisResponse = await audioAnalysisResponse.json();
+    const volumeAnalysisData : VolumeAnalysisResponse = audioAnalysisData.volumeAnalysis;
     const volumeFBItems: FeedbackItem[] = AnalysisResultToFBItems(
         JSON.stringify(volumeAnalysisData.feedbackItems)
     );
@@ -126,6 +124,9 @@ export async function GetPrompt() {
     }
     
 }
+
+//Various functions related to handling a behavioral session on the DB including
+//creating, modifying, and deleting by calling different API endpoints
 
 export async function PauseSession(sessionId: string, audioData: Blob, videoData: any) {
     const formData = new FormData();
