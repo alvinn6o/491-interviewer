@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
 import { SendAudioVideoToServer, EndSession, PauseSession } from "./behavioralService";
+import { DisplayFeedbackItems } from "./feedbackDisplay";
 
 
 export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, usePause }: {
@@ -24,7 +25,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     sessionId: string;
 }) {
     //Helps set useState typing
-    const test_items = [
+    const test_items : FeedbackItem[] = [
         { key: "None", content: "Eye Contact", score: 1 }
     ];
 
@@ -42,6 +43,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
 
         //Prevent multiple runs during dev mode
         if (effectHasRun.current) return;
+
         effectHasRun.current = true;
 
         console.log("CALLING USE EFFECT FOR BI END");
@@ -137,7 +139,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                             (item: FeedbackItem, i) => (
                                 <div key={`${i}`} className="p-1">
                                     <h3>{item.key}</h3>
-                                    <span>{item.score.toString()}</span>
+                                    <span>{item.score?.toString()}</span>
                                 </div>
                             )
                         )}
@@ -148,7 +150,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                             (item : FeedbackItem, i) => (
                                 <div key={`${i}`} className="p-1">
                                     <h3>{item.key}</h3>
-                                    <span>{item.score.toString()}</span>
+                                    <span>{item.score?.toString()}</span>
                                 </div>
                             )
                         )}
@@ -212,7 +214,8 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
             {!loading && !error && (
                 <div className={`${styles.centered_column} w-full`}>
                     <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
-                     <DataDisplay data={data} />
+                    {/* <DataDisplay data={data} /> */}
+                    <DisplayFeedbackItems items={data}/>
                 </div>
             )}
 

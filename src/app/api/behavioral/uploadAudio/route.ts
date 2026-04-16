@@ -22,9 +22,6 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    //TODO: replace with full analysis
-    //for now, test volume, output to console
-    const audioFeedbackItems = await TestAnalyzeVolume(audio);
 
     //Process Audio
     let text = await ProcessAudioToText(audio);
@@ -47,6 +44,10 @@ export async function POST(req: NextRequest) {
     );
 
     const tokensByCount = ProcessTextToTokens(text);
+
+    //TODO: replace with full analysis
+    //for now, test volume, output to console
+    const audioFeedbackItems = await TestAnalyzeVolume(audio, tokensByCount);
 
 
     //TODO: combine audioFeedbackItems with other feedbackItems

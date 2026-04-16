@@ -4,17 +4,20 @@
 //Date: 1/31/2026
 //Separate into own file, conversion functions
 
+import type { AnalysisItem } from "../../api/behavioral/analyze/analysisItem";
+
 export type FeedbackItem = {
     key: string,
-    content: string,
-    score: number
+    content?: string,
+    score?: number,
+    graph? : any[]
 }
 
 /*Convert analysis response into form the UI can read*/
 
 export function AnalysisResultToFBItems(analysisJSON: string)
 {
-    const analysisItems: any[] = JSON.parse(analysisJSON);
+    const analysisItems: AnalysisItem[] = JSON.parse(analysisJSON);
 
     const fbItems: FeedbackItem[] = [];
 
@@ -34,7 +37,7 @@ export function AnalysisResultToFBItems(analysisJSON: string)
     return fbItems;
 }
 
-export function CreateFeedbackItem(acategory: string, acontent: string, ascore: number)
+export function CreateFeedbackItem(acategory: string, acontent?: string, ascore?: number)
 {
     let category = acategory;
 

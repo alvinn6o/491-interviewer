@@ -15,5 +15,6 @@ export type FillerAnalysisResponse = {
 }
 
 export type AnalysisResponse = {
-    volumeAnalysis: VolumeAnalysisResponse
+    volumeAnalysis: VolumeAnalysisResponse,
+    fillerAnalysis: FillerAnalysisResponse
 }

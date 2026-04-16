@@ -20,7 +20,7 @@ enum FeedbackMessage {
     TooMuchUse = "Excessive usage of filler words such as "
 }
 
-export async function GetFillerAnalysis(tokens: Record<string, number>) {
+export function GetFillerAnalysis(tokens: Record<string, number>) {
 
     const analysisItems: AnalysisItem[] = [];
 
@@ -37,7 +37,13 @@ export async function GetFillerAnalysis(tokens: Record<string, number>) {
         const notesItem: AnalysisItem = GetNotesItem(scoreItem.score, fillerData.fillerWords)
         analysisItems.push(notesItem);
     }
-    
+
+    const fillerResponse : FillerAnalysisResponse = {
+        feedbackItems: analysisItems,
+        fillerWords: fillerData.fillerWords
+    }
+
+    return fillerResponse;
 }
 
 function GetScoreItem(fillerAmount: number, nonFillerAmount: number) {

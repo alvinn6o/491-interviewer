@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TestAnalyzeVolume } from "./analyze";
 
+//File is unused. analysis is called from /uploadAudio
 
 export async function POST(
     request: NextRequest
@@ -12,7 +13,7 @@ export async function POST(
     const formData = await request.formData();
     const audioBlob = formData.get("audio") as Blob;
 
-    TestAnalyzeVolume(audioBlob);
+    //TestAnalyzeVolume(audioBlob);
     
     return NextResponse.json(
         {
