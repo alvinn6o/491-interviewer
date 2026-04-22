@@ -215,6 +215,7 @@ model VideoUpload {
 
   createdAt DateTime @default(now())
   analysis  Json?
+  marks     VideoAnalysisMark[]
 }
 
 model VideoAnalysisMark {
@@ -232,20 +233,6 @@ model VideoAnalysisMark {
 
   @@index([videoUploadId])
   @@index([category])
-}
-
-model VideoUpload {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-  storageKey   String @unique
-
-  createdAt DateTime @default(now())
-  analysis  Json?
 }
 
 model StoredBehavioralSession {
