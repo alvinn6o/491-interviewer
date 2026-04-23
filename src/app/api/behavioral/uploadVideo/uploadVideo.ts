@@ -11,11 +11,11 @@ export async function GetVideoFeedback(videos: Blob) {
     //TODO: send video to facial analyis service
 
     const test_items = [
-        { category: "Eye Contact", content: "", score: 1 },
-        { category: "Confidence", content: "", score: 2 },
-        { category: "Quality of Answers", content: "", score: 3 },
-        { category: "Sociability", content: "", score: 4 },
-        { category: "Clear Speach", content: "", score: 5 },
+        { category: "Eye Contact", score: 1 },
+        { category: "Confidence", score: 2 },
+        { category: "Quality of Answers", score: 3 },
+        { category: "Sociability", score: 4 },
+        { category: "Clear Speach", score: 5 },
 
     ];
 
@@ -74,7 +74,7 @@ async function AverageFeedbackItems(base_items: any[], sessionId: string) {
             feedback_items.forEach(
                 (item: any) => {
 
-                    if (item.category && item.score) {
+                    if (item.category != null && item.score != null) {
 
                         const key = item.category;
                         const value = item.score;
@@ -93,20 +93,20 @@ async function AverageFeedbackItems(base_items: any[], sessionId: string) {
 
 
     //set the average values as the true scores of the final items
-    const final_items: any[] = base_items;
+    //const final_items: any[] = base_items;
 
-    final_items.forEach(
+    base_items.forEach(
         (item: any) => {
 
             const key = item.category;
 
-            if (totals[key] && counts[key]) {
+            if (totals[key] != null && counts[key] != null) {
                 item.score = totals[key] / counts[key];
             }
         }
     )
 
-    return final_items;
+    return base_items;
 }
 
 /*

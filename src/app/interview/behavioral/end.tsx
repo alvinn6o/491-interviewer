@@ -7,16 +7,16 @@
 //Date: 2/19/2025
 //Move to end.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
-import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
 import { SendAudioVideoToServer, EndSession, PauseSession } from "./behavioralService";
+import { DisplayFeedbackItems } from "./feedbackDisplay";
 
-//TODO: have to refactor to combine audio and video data into one call
+
 export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, usePause }: {
     changeState: React.Dispatch<React.SetStateAction<BIPageState>>;
     usePause: boolean;
@@ -25,8 +25,8 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     sessionId: string;
 }) {
     //Helps set useState typing
-    const test_items = [
-        { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
+    const test_items : FeedbackItem[] = [
+        { key: "None", content: "Eye Contact", score: 1 }
     ];
 
     //Modified for UC 1 to include loading and error states
@@ -37,7 +37,14 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     const [video, setVideo] = useState<Blob | null>(null);
     const [audio, setAudio] = useState<Blob | null>(null);
 
+    const effectHasRun = useRef(false);
+
     useEffect(() => { //Call once on page state load
+
+        //Prevent multiple runs during dev mode
+        if (effectHasRun.current) return;
+
+        effectHasRun.current = true;
 
         console.log("CALLING USE EFFECT FOR BI END");
 
@@ -68,7 +75,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                 else {
 
                     const result = await SendAudioVideoToServer(sessionId, audioData, videoData); //await for the audio data to be uploaded
-                    const updatedSession = await EndSession(sessionId);   //update session with completed state
+                    await EndSession(sessionId);   //update session with completed state
 
                     console.log("Completed audio upload and session end.")
 
@@ -91,80 +98,11 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     },
 
     [])
-
+    
     const RestartInterviewButton = async () => {
         changeState(BIPageState.START);
     };
 
-    const DataDisplay = ({ data }: { data: FeedbackItem[] }) => {
-
-        const notes = data.filter(item => item.key === FeedbackCategory.NOTES);
-        const otherData = data.filter(item => item.key !== FeedbackCategory.NOTES);
-
-        const DisplayBox = ({ title, children }: { title: string; children: ReactNode }) => {
-
-            return (
-                <div className="outline-2 rounded w-full">
-                    <h2>{title}</h2>
-                    <hr/>
-                    {children}
-                </div>
-            )
-        };
-
-        const FeedbackList = ({ data }: { data: FeedbackItem[] }) => {
-
-            const splitFeedback = (data: FeedbackItem[]) => {
-                const middle = Math.ceil(data.length / 2); // rounds up if odd
-                const firstHalf = data.slice(0, middle);
-                const secondHalf = data.slice(middle);
-
-                return [firstHalf, secondHalf];
-            };
-
-            const [firstHalf, secondHalf] = splitFeedback(data);
-
-            return (
-                <div className="flex flex-row gap-4 p-2">
-                    <div className="flex flex-col">
-                        {firstHalf?.map(
-
-                            (item, i) => (
-                                <div key={`${i}`} className="p-1">
-                                    <h3>{item.key}</h3>
-                                    <span>{item.score.toString()}</span>
-                                </div>
-                            )
-                        )}
-                    </div>
-                    <div className="flex flex-col">
-                        {secondHalf?.map(
-
-                            (item, i) => (
-                                <div key={`${i}`} className="p-1">
-                                    <h3>{item.key}</h3>
-                                    <span>{item.score.toString()}</span>
-                                </div>
-                            )
-                        )}
-                    </div>
-                </div>
-            );
-
-        };
-
-        return (
-            <div className="w-3/4 flex flex-row gap-4">
-                <DisplayBox title="Notes">
-                    {notes[0]?.content}
-                </DisplayBox>
-
-                <DisplayBox title="Statistics">
-                    <FeedbackList data={otherData}/>
-                </DisplayBox>
-            </div>
-        );
-    };
 
     if (usePauseScreen) {
         return (
@@ -188,7 +126,8 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
             {!loading && !error && (
                 <div className={`${styles.centered_column} w-full`}>
                     <button className="orange_button" onClick={RestartInterviewButton}>Restart Interview</button>
-                     <DataDisplay data={data} />
+                    {/* <DataDisplay data={data} /> */}
+                    <DisplayFeedbackItems items={data}/>
                 </div>
             )}
 
