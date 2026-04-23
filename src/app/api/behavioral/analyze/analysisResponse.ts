@@ -14,7 +14,12 @@ export type FillerAnalysisResponse = {
     fillerWords: string[]
 }
 
+export type BasicAnalysisResponse = {
+    feedbackItems: AnalysisItem[]
+}
+
 export type AnalysisResponse = {
     volumeAnalysis: VolumeAnalysisResponse,
-    fillerAnalysis: FillerAnalysisResponse
+    fillerAnalysis: FillerAnalysisResponse,
+    wordCountAnalysis: BasicAnalysisResponse
 }

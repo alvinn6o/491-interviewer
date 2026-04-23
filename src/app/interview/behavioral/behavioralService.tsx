@@ -15,7 +15,7 @@
 import type { FeedbackItem } from "./feedbackItem";
 import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
-import type { AnalysisResponse, VolumeAnalysisResponse } from "../../api/behavioral/analyze/analysisResponse";
+import type { AnalysisResponse, VolumeAnalysisResponse, FillerAnalysisResponse, BasicAnalysisResponse } from "../../api/behavioral/analyze/analysisResponse";
 
 //Wrapper function to simplify calls to behavioral service
 export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
@@ -45,13 +45,29 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
 }
 
 async function AudioAnalysisToFBItem(audioAnalysisResponse: Response) {
-    const audioAnalysisData : AnalysisResponse = await audioAnalysisResponse.json();
-    const volumeAnalysisData : VolumeAnalysisResponse = audioAnalysisData.volumeAnalysis;
+    const audioAnalysisData: AnalysisResponse = await audioAnalysisResponse.json();
+
+    const volumeData: VolumeAnalysisResponse = audioAnalysisData.volumeAnalysis;
+    const fillerData: FillerAnalysisResponse = audioAnalysisData.fillerAnalysis;
+    const wordcountData: BasicAnalysisResponse = audioAnalysisData.wordCountAnalysis;
+
+
     const volumeFBItems: FeedbackItem[] = AnalysisResultToFBItems(
-        JSON.stringify(volumeAnalysisData.feedbackItems)
+        JSON.stringify(volumeData.feedbackItems)
     );
 
-    return volumeFBItems;
+    const fillerFBItems: FeedbackItem[] = AnalysisResultToFBItems(
+        JSON.stringify(fillerData.feedbackItems)
+    );
+
+    const wordCountFBItems: FeedbackItem[] = AnalysisResultToFBItems(
+        JSON.stringify(wordcountData.feedbackItems)
+    );
+
+    const ab = CombineFeedback(volumeFBItems, fillerFBItems);
+    const bc = CombineFeedback(ab, wordCountFBItems);
+
+    return bc;
 }
 
 async function VideoAnalysisToFBItem(videoAnalysisResponse: Response) {

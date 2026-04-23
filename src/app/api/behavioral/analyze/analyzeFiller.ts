@@ -3,6 +3,7 @@
 // Check for filler words
 
 import type { AnalysisItem } from "./analysisItem";
+import { AnalysisType } from "./analysisItem";
 import { CreateAnalysisItemScore, CreateAnalysisItemContent } from "./analysisItem";
 import type { FillerAnalysisResponse } from "./analysisResponse";
 
@@ -52,7 +53,7 @@ function GetScoreItem(fillerAmount: number, nonFillerAmount: number) {
 
     //avoid divide by zero
     if (total == 0)
-        return CreateAnalysisItemScore("Word Choice", 0);
+        return CreateAnalysisItemScore(AnalysisType.WordChoice, 0);
 
     const ratio = fillerAmount / (nonFillerAmount + fillerAmount);
 
@@ -62,24 +63,24 @@ function GetScoreItem(fillerAmount: number, nonFillerAmount: number) {
     const scoreThreshold = 0.1;
     const score = Math.max(0, Math.min(1, ratio / scoreThreshold)) * 5;
 
-    return CreateAnalysisItemScore("Word Choice", score);
+    return CreateAnalysisItemScore(AnalysisType.WordChoice, score);
 }
 
 function GetNotesItem(score: number, fillerWords: string[]) {
     if (score >= 4) {
-        return CreateAnalysisItemContent("Notes", FeedbackMessage.NoUse);
+        return CreateAnalysisItemContent(AnalysisType.Notes, FeedbackMessage.NoUse);
     }
     else if (score >= 2.5) {
         //append word list to message
         const message = ConstructMessage(FeedbackMessage.SomeUse, fillerWords);
 
-        return CreateAnalysisItemContent("Notes", message);
+        return CreateAnalysisItemContent(AnalysisType.Notes, message);
     }
     else {
         //append word list to message
         const message = ConstructMessage(FeedbackMessage.TooMuchUse, fillerWords);
 
-        return CreateAnalysisItemContent("Notes", message);
+        return CreateAnalysisItemContent(AnalysisType.Notes, message);
     }
 }
 

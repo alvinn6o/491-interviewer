@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
 
     //TODO: replace with full analysis
     //for now, test volume, output to console
-    const audioFeedbackItems = await TestAnalyzeVolume(audio, tokensByCount);
+    const audioFeedbackItems = await TestAnalyzeVolume(audio, tokensByCount, text);
 
 
-    //TODO: combine audioFeedbackItems with other feedbackItems
+    //TODO: combine audioFeedbackItems with video feedbackItems
     
 
     //send to behavioralSerice.tsx
