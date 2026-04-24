@@ -30,7 +30,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable}`}>
-      <body>
+      {/* suppressHydrationWarning: Grammarly and similar extensions inject
+          attributes (data-gr-ext-installed, data-new-gr-c-s-check-loaded)
+          onto <body> before React hydrates, which otherwise triggers a
+          hydration mismatch warning. */}
+      <body suppressHydrationWarning>
         <TRPCReactProvider>
           <SessionProvider>
             <Navbar />

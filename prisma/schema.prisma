@@ -68,6 +68,7 @@ model User {
   settings          UserSettings?
   videoUploads      VideoUpload[]
   jobApplications   JobApplication[]
+  dismissedJobs     DismissedJob[]
 }
 
 model VerificationToken {
@@ -280,6 +281,19 @@ model StatusHistory {
   changedAt        DateTime       @default(now())
 
   @@index([jobApplicationId])
+}
+
+// Tracks Adzuna job IDs a user has dismissed from the suggestions feed
+// so they do not reappear in future /api/jobs/suggest responses.
+model DismissedJob {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adzunaJobId String
+  dismissedAt DateTime @default(now())
+
+  @@unique([userId, adzunaJobId])
+  @@index([userId])
 }
 
 // ============================================
