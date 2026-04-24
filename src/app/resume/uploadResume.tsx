@@ -11,6 +11,7 @@ interface UploadResult {
     fileName: string;
     extractedText: string;
     textLength: number;
+    file: File;
 }
 
 interface UploadError {
@@ -45,6 +46,7 @@ export async function OnUploadResumeClicked(): Promise<UploadResponse>  {
             fileName: result.data.fileName,
             extractedText: result.data.extractedText,
             textLength: result.data.textLength,
+            file,
         };
 
     } catch (err) {

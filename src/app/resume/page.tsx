@@ -5,7 +5,7 @@
 //Date: 01/20/2026 - End of Semester 
 
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, lazy, Suspense } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import { OnUploadResumeClicked, OnAddJobDescriptionClicked } from "./uploadResume"
@@ -22,6 +22,8 @@ import {
     HighlightedResumeText,
 } from "./resumeCharts"
 import { fetchOptimizations } from "./optimizerService"
+
+const PdfViewer = lazy(() => import("./PdfViewer"));
 
 function OnFailedUpload() {
     console.log("Failed Upload");
@@ -69,16 +71,17 @@ function ViewSwitcher() {
     const [resumeText, setResumeText] = useState("")
     const [resumeFileName, setResumeFileName] = useState("")
     const [jobDescription, setJobDescription] = useState("")
+    const [resumeFile, setResumeFile] = useState<File | null>(null)
 
     switch (uploadState) {
         case UploadPageState.UPLOAD:
-            return (<UploadBox changeState={setUploadState} changeResumeText={setResumeText} changeResumeFileName={setResumeFileName} />);
+            return (<UploadBox changeState={setUploadState} changeResumeText={setResumeText} changeResumeFileName={setResumeFileName} changeResumeFile={setResumeFile} />);
 
         case UploadPageState.ADD_JOB_DESC:
             return (<AddJobDescriptionBox changeState={setUploadState} changeFeedbackData={setFeedbackData} resumeText={resumeText} resumeFileName={resumeFileName} changeJobDescription={setJobDescription} />);
 
         case UploadPageState.FEEDBACK:
-            return (<ViewFeedbackBox changeState={setUploadState} data={feedbackData} jobDescription={jobDescription} resumeText={resumeText} />);
+            return (<ViewFeedbackBox changeState={setUploadState} data={feedbackData} jobDescription={jobDescription} resumeText={resumeText} resumeFile={resumeFile} />);
     }
 }
 
@@ -114,10 +117,11 @@ function Instructions() {
     )
 }
 
-function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
+function UploadBox({ changeState, changeResumeText, changeResumeFileName, changeResumeFile }: {
     changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
     changeResumeText: React.Dispatch<React.SetStateAction<string>>;
     changeResumeFileName: React.Dispatch<React.SetStateAction<string>>;
+    changeResumeFile: React.Dispatch<React.SetStateAction<File | null>>;
 }) {
 
     const [isEmpty, setEmpty] = useState(false);
@@ -145,6 +149,7 @@ function UploadBox({ changeState, changeResumeText, changeResumeFileName }: {
             console.log("Upload successful:", result.fileName, `(${result.textLength} chars)`);
             changeResumeText(result.extractedText);
             changeResumeFileName(result.fileName);
+            changeResumeFile(result.file);
 
             changeState(UploadPageState.ADD_JOB_DESC);
         } catch (error: any) {
@@ -270,11 +275,12 @@ function AddJobDescriptionBox(
 
 // ─── Main feedback view ───────────────────────────────────────────────────────
 
-function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
+function ViewFeedbackBox({ changeState, data, jobDescription, resumeText, resumeFile }: {
     changeState: React.Dispatch<React.SetStateAction<UploadPageState>>;
     data: FeedbackItem[];
     jobDescription: string;
     resumeText: string;
+    resumeFile: File | null;
 }) {
     const [activeTab, setActiveTab] = useState<"report" | "jobdesc" | "optimizer">("report");
 
@@ -391,22 +397,33 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
                     {activeTab === "optimizer" && (
                         <div className="flex gap-4 flex-1 min-h-0 w-full">
 
-                            {/* Left — Resume with highlights */}
+                            {/* Left — Resume (PDF canvas view or plain text fallback) */}
                             <div className="flex flex-col flex-1 min-w-0 border border-gray-200 rounded-lg overflow-hidden">
                                 <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center flex-shrink-0">
                                     <h4 className="text-gray-800 m-0 text-sm font-semibold">Your Resume</h4>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-4 text-gray-800 text-xs leading-6 whitespace-pre-wrap font-mono bg-white">
-                                    <HighlightedResumeText
-                                        text={resumeText}
-                                        highlights={optimizerResult
-                                            ? optimizerResult.suggestions
-                                                .filter(s => !!s.originalText)
-                                                .map(s => s.originalText)
-                                            : []
-                                        }
-                                    />
-                                </div>
+                                {resumeFile?.type === "application/pdf" ? (
+                                    <Suspense fallback={
+                                        <div className="flex flex-col items-center justify-center flex-1 gap-3">
+                                            <div className="w-7 h-7 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+                                            <p className="text-gray-500 text-sm m-0">Loading viewer...</p>
+                                        </div>
+                                    }>
+                                        <PdfViewer file={resumeFile} />
+                                    </Suspense>
+                                ) : (
+                                    <div className="flex-1 overflow-y-auto p-4 text-gray-800 text-xs leading-6 whitespace-pre-wrap font-mono bg-white">
+                                        <HighlightedResumeText
+                                            text={resumeText}
+                                            highlights={optimizerResult
+                                                ? optimizerResult.suggestions
+                                                    .filter(s => !!s.originalText)
+                                                    .map(s => s.originalText)
+                                                : []
+                                            }
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Right — Suggestions */}
@@ -422,7 +439,6 @@ function ViewFeedbackBox({ changeState, data, jobDescription, resumeText }: {
                                     {/* Pre-run */}
                                     {!optimizerResult && !optimizerLoading && !optimizerError && (
                                         <div className="flex flex-col items-center gap-4 p-8 text-center">
-                                            <span className="text-4xl">✨</span>
                                             <div>
                                                 <p className="text-gray-700 text-sm font-medium m-0 mb-1">Resume Optimizer</p>
                                                 <p className="text-gray-400 text-xs m-0">Lines to improve will be highlighted red in your resume.</p>
