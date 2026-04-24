@@ -5,6 +5,13 @@ import { redirect } from "next/navigation";
 import { auth } from "~/server/auth";
 import Link from "next/link";
 import { db } from "~/server/db";
+import type { ATSScoreResult } from "~/server/utils/ats-scorer";
+import {
+  getCategories,
+  resolveLabel,
+  MiniDonut,
+  CategoryDotGrid,
+} from "./resume-analysis/_components/resumeAnalysisHelpers";
 
 export const dynamic = "force-dynamic"
 
@@ -24,6 +31,13 @@ export default async function HistoryPage() {
     orderBy: {
       startedAt: "desc",
     },
+  });
+
+  // Fetch the 2 most recent resume analyses
+  const recentAnalyses = await db.resumeAnalysis.findMany({
+    where: { userId: session.user.id },
+    orderBy: { analyzedAt: "desc" },
+    take: 2,
   });
 
   function formatDate(date: Date) {
@@ -48,7 +62,8 @@ export default async function HistoryPage() {
 
       {/* History Cards Grid */}
       <div className="mx-auto grid max-w-[1500px] grid-cols-1 gap-8 md:grid-cols-3">
-        {/* Latest Resume Analysis Card */}
+
+        {/* ── Latest Resume Analysis Card ── */}
         <div className="rounded-lg border-2 border-black bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Latest Resume Analysis</h2>
@@ -61,19 +76,39 @@ export default async function HistoryPage() {
           </div>
           <hr className="-mx-6 mb-6 border-t-2 border-black" />
 
-          <div className="space-y-6 text-center text-gray-500">
-            <p className="text-sm">No resume analyses yet</p>
-            <p className="text-xs">Upload a resume to get started!</p>
-            <Link
-              href="/resume"
-              className="inline-block rounded-full bg-orange-500 px-6 py-2 text-sm text-white hover:bg-orange-600"
-            >
-              Upload Resume
-            </Link>
-          </div>
+          {recentAnalyses.length === 0 ? (
+            <div className="space-y-6 text-center text-gray-500">
+              <p className="text-sm">No resume analyses yet</p>
+              <p className="text-xs">Upload a resume to get started!</p>
+              <Link
+                href="/resume"
+                className="inline-block rounded-full bg-orange-500 px-6 py-2 text-sm text-white hover:bg-orange-600"
+              >
+                Upload Resume
+              </Link>
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-gray-100">
+              {recentAnalyses.map((analysis, idx) => {
+                const atsResult = analysis.feedback as unknown as ATSScoreResult;
+                const categories = getCategories(atsResult);
+                return (
+                  <div key={analysis.id} className={`flex items-center gap-5 ${idx > 0 ? "pt-5" : ""} ${idx < recentAnalyses.length - 1 ? "pb-5" : ""}`}>
+                    <MiniDonut score={atsResult.score} size={90} />
+                    <div className="flex flex-col gap-3 min-w-0">
+                      <p className="text-base font-semibold text-gray-900 truncate">
+                        {resolveLabel(analysis.jobDescription)}
+                      </p>
+                      <CategoryDotGrid categories={categories} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Latest Technical Interview Card */}
+        {/* ── Latest Technical Interview Card ── */}
         <div className="rounded-lg border-2 border-black bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Latest Technical Interview</h2>
@@ -87,7 +122,6 @@ export default async function HistoryPage() {
           <hr className="-mx-6 mb-6 border-t-2 border-black" />
 
           {latestTechnical ? (
-            // Show latest session info
             <div className="space-y-3">
               <p className="text-xs text-gray-500">
                 {formatDate(latestTechnical.startedAt)}
@@ -137,7 +171,6 @@ export default async function HistoryPage() {
               </div>
             </div>
           ) : (
-            // Empty state
             <div className="space-y-6 text-center text-gray-500">
               <p className="text-sm">No technical interviews yet</p>
               <p className="text-xs">Start a technical interview to see your results here!</p>
@@ -151,7 +184,7 @@ export default async function HistoryPage() {
           )}
         </div>
 
-        {/* Latest Behavioral Interview Card */}
+        {/* ── Latest Behavioral Interview Card ── */}
         <div className="rounded-lg border-2 border-black bg-white p-6">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Latest Behavioral Interview</h2>
@@ -175,6 +208,7 @@ export default async function HistoryPage() {
             </Link>
           </div>
         </div>
+
       </div>
     </main>
   );

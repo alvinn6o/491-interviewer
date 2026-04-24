@@ -91,11 +91,12 @@ async function WaitForFile(): Promise<File> {
 export async function OnAddJobDescriptionClicked(
     resumeText: string,
     jobDesc: string,
-    resumeFileName: string
+    resumeFileName: string,
+    companyName?: string
 ): Promise<FeedbackItem[]> {
 
     //Send resume and job desc to server to be analyzed
-    const response = await SendResumeTextAndJobDescToServer(resumeText, jobDesc, resumeFileName);
+    const response = await SendResumeTextAndJobDescToServer(resumeText, jobDesc, resumeFileName, companyName);
     const result = await response.json();
 
     if (!result.success) {

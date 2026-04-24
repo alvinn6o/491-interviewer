@@ -200,18 +200,27 @@ function AddJobDescriptionBox(
 ) {
 
     const [isEmpty, setEmpty] = useState(false);
+    const [isCompanyEmpty, setCompanyEmpty] = useState(false);
     const [isLoading, setLoading] = useState(false);
+    const [companyName, setCompanyName] = useState("");
 
     const AddJobDescButton = async () => {
         try {
+            if (companyName.trim() == "") {
+                setCompanyEmpty(true);
+                return;
+            }
+
             if (template == "") {
                 setEmpty(true);
                 return;
             }
 
+            setCompanyEmpty(false);
+
             setLoading(true);
 
-            const result = await OnAddJobDescriptionClicked(resumeText, template, resumeFileName);
+            const result = await OnAddJobDescriptionClicked(resumeText, template, resumeFileName, companyName);
 
             setLoading(false);
 
@@ -238,6 +247,17 @@ function AddJobDescriptionBox(
                 ) : (
                     <>
                         <textarea
+                            className={`w-full h-10 border rounded-lg p-3 text-sm text-gray-800 resize-none focus:outline-none focus:border-orange-400 ${isCompanyEmpty ? "border-red-400" : "border-gray-200"}`}
+                            placeholder="Company / role name..."
+                            value={companyName}
+                            onChange={(e) => { setCompanyName(e.target.value); setCompanyEmpty(false); }}
+                            rows={1}
+                        />
+                        {isCompanyEmpty && (
+                            <p className="text-red-500 text-sm -mt-2 m-0">Please enter a company or role name.</p>
+                        )}
+
+                        <textarea
                             className="w-full h-40 border border-gray-200 rounded-lg p-3 text-sm text-gray-800 resize-none focus:outline-none focus:border-orange-400"
                             placeholder="Paste a job description here..."
                             value={template}
@@ -251,7 +271,13 @@ function AddJobDescriptionBox(
                                     name="Templates"
                                     id="templates"
                                     className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 bg-white focus:outline-none focus:border-orange-400"
-                                    onChange={(e) => setTemplate(JOB_DESCRIPTION_TEMPLATES[e.target.value as JobDescriptionTemplate])}
+                                    onChange={(e) => {
+                                        const key = e.target.value as JobDescriptionTemplate;
+                                        setTemplate(JOB_DESCRIPTION_TEMPLATES[key]);
+                                        if (key !== JobDescriptionTemplate.NONE) {
+                                            setCompanyName(JOB_DESCRIPTION_LABELS[key]);
+                                        }
+                                    }}
                                 >
                                     {Object.values(JobDescriptionTemplate).map((key) => (
                                         <option key={key} value={key}>{JOB_DESCRIPTION_LABELS[key]}</option>
