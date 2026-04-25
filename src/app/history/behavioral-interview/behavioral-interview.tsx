@@ -15,6 +15,8 @@ import { GetUserBehavioralSessions } from "./behavioralHistoryService";
 
 import { DisplayFeedbackItems } from "../../interview/behavioral/feedbackDisplay";
 
+import { FilterItems, FilterDisplay , DateDisplay} from "../../account/overview/listFilter"
+
 export function BehavioralInterviewHistoryPageContents() {
   return (
     <main className="min-h-screen bg-white p-8">
@@ -68,14 +70,12 @@ function ResultsContainer() {
         })();
     }, []);
 
-    const startDate = 0;
-    const endDate = 0;
-    const filterType = "COMPLETED";
+    const [filterType, setFilter] = useState("all");
 
-    //TODO:
-    function FilterItems(startDate: number, endDate: number, filterType: string, items: any[]) {
-        return [];
-    }
+    const [startDate, setStart] = useState("");
+    const [endDate, setEnd] = useState("");
+
+
 
     //Run any time the filters change
     useEffect(() => {
@@ -87,9 +87,15 @@ function ResultsContainer() {
         < div className = "mx-auto max-w-7xl" >
             <div className="rounded-lg border-2 border-black bg-white p-6">
 
-                <Count count={items.length}/>
+                <Count count={items.length} />
 
                 <hr className="-mx-6 mb-6 border-t-2 border-black" />
+
+
+                <DateDisplay startDate={startDate} endDate={endDate} setStartDate={setStart} setEndDate={setEnd} />
+                <FilterDisplay filterType={filterType} setFilterType={setFilter} />
+
+                <br/>
 
                 {!loaded && (
                     <div>Loading sessions...</div>
@@ -100,7 +106,7 @@ function ResultsContainer() {
                 )}
 
                 {loaded && !empty && (
-                    <FilledList sessions={items}/>
+                    <FilledList sessions={filteredItems}/>
                 ) }
 
             </div>
