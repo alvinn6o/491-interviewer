@@ -43,7 +43,7 @@ function SortFeedbackItems(items: FeedbackItem[]) {
                 scoreItems.push(item);
             }
 
-            if (item.content != null) {
+            if (item.content != null && item.content != "") {
                 contentItems.push(item);
             }
 
@@ -181,7 +181,7 @@ function DisplayGraphFeedback({ items }: { items: FeedbackItem[] }) {
 
 function DisplayBox({ title, children }: { title: string; children: ReactNode }) {
     return (
-        <div className="outline-2 rounded w-full">
+        <div>
             <h2>{title}</h2>
             <hr />
             {children}

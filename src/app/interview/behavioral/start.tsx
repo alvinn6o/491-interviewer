@@ -71,7 +71,7 @@ export function BIStart({ changeState, changePrompt, audioRef, setSessionId, sto
 
                         //Abandon if previously resumed
                         AbandonSession(findResp.session.id);
-
+                        setLoading(false);
                     }
                     else {
                         function ContinueToActivePage() {
