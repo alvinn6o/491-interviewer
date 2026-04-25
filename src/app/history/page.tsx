@@ -40,13 +40,7 @@ export default async function HistoryPage() {
     take: 2,
   });
 
-  function formatDate(date: Date) {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+  
   //latest behavioral
     const latestBehavioral = await db.interviewSession.findFirst({
         where: {
