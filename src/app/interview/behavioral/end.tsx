@@ -7,7 +7,7 @@
 //Date: 2/19/2025
 //Move to end.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import styles from "./test.module.css";
 import React from "react";
 import type { ReactNode } from "react";
@@ -15,6 +15,7 @@ import { FeedbackCategory } from "./feedbackItem";
 import type { FeedbackItem } from "./feedbackItem";
 import { BIPageState } from "./main";
 import { SendAudioVideoToServer, EndSession, PauseSession } from "./behavioralService";
+import VideoPlayerWithOverlay from "../../../components/VideoPlayerWithOverlay";
 
 //TODO: have to refactor to combine audio and video data into one call
 export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, usePause }: {
@@ -25,19 +26,36 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     sessionId: string;
 }) {
     //Helps set useState typing
-    const test_items = [
+    const test_items: FeedbackItem[] = [
         { key: FeedbackCategory.NONE, content: "Eye Contact", score: 1 }
     ];
 
     //Modified for UC 1 to include loading and error states
-    const [data, setFeedbackData] = useState(test_items);
+    const hasUploadedRef = useRef(false);
+    const [data, setFeedbackData] = useState<FeedbackItem[]>(test_items);
     const [loading, setLoading] = useState(false);
     const [usePauseScreen, setUsePauseScreen] = useState(false);
     const [error, setError] = useState(false);
     const [video, setVideo] = useState<Blob | null>(null);
     const [audio, setAudio] = useState<Blob | null>(null);
+    const [rawVideoAnalysis, setRawVideoAnalysis] = useState<any>(null);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (videoUrl) {
+                URL.revokeObjectURL(videoUrl);
+            }
+        };
+    }, [videoUrl]);
 
     useEffect(() => { //Call once on page state load
+
+        if (hasUploadedRef.current) {
+            return;
+        }
+
+        hasUploadedRef.current = true;
 
         console.log("CALLING USE EFFECT FOR BI END");
 
@@ -48,12 +66,14 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                 //Try and Wait For Upload
                 //Send the audio data previously set by the useEffect cleanup in
                 //The Active page state to the server to be transcribed.
-                console.log("Waiting for audioData to resolve.")
+                console.log("Waiting for audioData to resolve.");
 
                 const audioData = await waitForAudio(); //await for the audio data to be sent by BIActive
-                const videoData = await waitForVideo(); //await for the audio data to be sent by BIActive
+                const videoData = await waitForVideo(); //await for the video data to be sent by BIActive
 
-                console.log("Waiting for audioData to be analyzed with session ID: " + sessionId)
+                console.log("Waiting for audioData to be analyzed with session ID: " + sessionId);
+                console.log("VIDEO SIZE:", videoData.size);
+                console.log("VIDEO TYPE:", videoData.type);
 
                 if (usePause) {
                     //Pause session instead of ending it
@@ -70,12 +90,15 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
                     const result = await SendAudioVideoToServer(sessionId, audioData, videoData); //await for the audio data to be uploaded
                     const updatedSession = await EndSession(sessionId);   //update session with completed state
 
-                    console.log("Completed audio upload and session end.")
+                    console.log("Completed audio upload and session end.");
+                    console.log("RAW ANALYSIS:", result.rawVideoAnalysis);
 
                     //store data in useState
-                    setFeedbackData(result);
+                    setFeedbackData(result.allFeedback);
+                    setRawVideoAnalysis(result.rawVideoAnalysis);
                     setVideo(videoData);
                     setAudio(audioData);
+                    setVideoUrl(URL.createObjectURL(videoData));
                 }
 
                 setLoading(false);
@@ -88,9 +111,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
         }
 
         UploadAudio();
-    },
-
-    [])
+    }, [sessionId, usePause, waitForAudio, waitForVideo]);
 
     const RestartInterviewButton = async () => {
         changeState(BIPageState.START);
@@ -161,6 +182,16 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
 
                 <DisplayBox title="Statistics">
                     <FeedbackList data={otherData}/>
+
+                    {videoUrl && rawVideoAnalysis?.segments && (
+                        <div className="mt-6">
+                            <VideoPlayerWithOverlay
+                                videoSrc={videoUrl}
+                                segments={rawVideoAnalysis.segments}
+                                title="Detailed Video Analysis"
+                            />
+                        </div>
+                    )}
                 </DisplayBox>
             </div>
         );
@@ -177,7 +208,7 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
     return (
         <div className={`${styles.centered_column} w-full`}>
 
-            <RecordedVideoBox video={video} audio={audio} />
+            <RecordedVideoBox videoUrl={videoUrl} audio={audio} />
 
             {loading && (
                 <div>
@@ -204,21 +235,14 @@ export function BIEnd({ changeState, waitForAudio, waitForVideo, sessionId, useP
 
 }
 
-function RecordedVideoBox({ video, audio }: { video: Blob | null , audio: Blob | null}) {
+function RecordedVideoBox({ videoUrl, audio }: { videoUrl: string | null , audio: Blob | null}) {
 
-    let hasVideo = false;
-    let videoURL: string = "";
-
-    if (video) {
-        videoURL = URL.createObjectURL(video);
-        hasVideo = true;
-    }
-
+    const hasVideo = !!videoUrl;
 
     return (
         <div className={`${styles.centered_column} outline-2 rounded w-3/4 p-2`}>
             {hasVideo && (
-                <VideoPlayer src={videoURL} />
+                <VideoPlayer src={videoUrl ?? undefined} />
             )}
             {!hasVideo && (
                 <div>
@@ -245,6 +269,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
     return (
         <video
+            src={src}
             width={width}
             height={height}
             controls={controls}
@@ -253,11 +278,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 display: "block",
             }}
         >
-            {src ? <source src={src} type="video/mp4" /> : null}
             Your browser does not support the video tag.
         </video>
     );
 };
-
-
-

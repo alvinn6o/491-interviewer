@@ -11,18 +11,63 @@
 //Date: 2/19/2026
 //Change api point "store" to "end"
 
+//Alexander Tu
+//Date: 04/25/26
+//updated to handle object shape uploadVideo.ts
+
 import type { FeedbackItem } from "./feedbackItem";
 import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 
+type RawVideoAnalysis = {
+    summary?: {
+        video?: {
+            sample_fps?: number;
+            sampled_frames?: number;
+        };
+        posture?: {
+            valid_frames?: number;
+            good_frames?: number;
+            good_percent?: number;
+        };
+        eye_contact?: {
+            valid_frames?: number;
+            good_frames?: number;
+            good_percent?: number;
+        };
+        facial_expression?: {
+            valid_frames?: number;
+            good_frames?: number;
+            good_percent?: number;
+        };
+    };
+    segments?: Array<{
+        id?: string;
+        category: string;
+        startSec: number;
+        endSec: number;
+        isGood: boolean;
+        scoreAvg?: number | null;
+        note?: string | null;
+        createdAt?: string;
+    }>;
+    error?: string;
+};
+
+type UploadResult = {
+    feedback: FeedbackItem[];
+    rawAnalysis?: RawVideoAnalysis;
+};
+
+
 //Wrapper function to simplify calls to behavioral service
 export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
 
-    const audioFeedback = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
-    const videoFeedback = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
+    const audioResult = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoResult = await SendToServer(sessionId, videoData, "/api/behavioral/uploadVideo", "video");
 
 
-    const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
+    const allFeedback = CombineFeedback(audioResult.feedback, videoResult.feedback);
 
     const formData = new FormData();
 
@@ -36,10 +81,13 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
         body: formData
     });
 
-    return allFeedback;
+    return {
+        allFeedback,
+        rawVideoAnalysis: videoResult.rawAnalysis ?? null
+    };
 }
 
-async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
+async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string): Promise<UploadResult> {
     //Attach data to form data
     //in order to send it to the api
     console.log("Send blob to " + apiURL);
@@ -66,12 +114,29 @@ async function SendToServer(sessionId: string, data: Blob, apiURL: string, formD
 
     //Convert json to FeedbackItem objects
     const responseData = await response.json();
+
+    //new object shape from uploadVideo.ts
+    if (responseData.feedback) {
+        const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(responseData.feedback));
+
+        console.log("convert to fbItems from  " + apiURL);
+
+        //send to end.tsx
+        return {
+            feedback: fbItems,
+            rawAnalysis: responseData.rawAnalysis
+        };
+    }
+
+    //old plain-array fallback
     const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(responseData));
 
     console.log("convert to fbItems from  " + apiURL);
 
     //send to end.tsx
-    return fbItems;
+    return {
+        feedback: fbItems
+    };
 }
 
 

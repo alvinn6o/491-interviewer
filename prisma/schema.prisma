@@ -67,6 +67,8 @@ model User {
   profile           UserProfile?
   settings          UserSettings?
   videoUploads      VideoUpload[]
+  jobApplications   JobApplication[]
+  dismissedJobs     DismissedJob[]
 }
 
 model VerificationToken {
@@ -99,7 +101,8 @@ model UserSettings {
   prefersDarkMode Boolean @default(false)
   languagePref    String? @default("JavaScript")
   user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  fontScale       Float    @default(1.0)
+  
   @@index([userId])
 }
 
@@ -204,49 +207,43 @@ model BehavioralPrompt {
 }
 
 model VideoUpload {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String                 @id @default(cuid())
+  userId       String
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   originalName String
   mimeType     String
   sizeBytes    Int
-  storageKey   String @unique
+  storageKey   String                 @unique
 
-  createdAt DateTime @default(now())
-  analysis  Json?
+  createdAt    DateTime               @default(now())
+  analyzedAt   DateTime?
+
+  analysis     Json?
+
+  segments     VideoAnalysisSegment[]
+
+  @@index([userId])
 }
 
-model VideoAnalysisMark {
-  id            String   @id @default(cuid())
+model VideoAnalysisSegment {
+  id            String      @id @default(cuid())
   videoUploadId String
   videoUpload   VideoUpload @relation(fields: [videoUploadId], references: [id], onDelete: Cascade)
 
-  category      String   // "posture" | "eye_contact" | "facial_expression"
-  timestampSec  Float
-  score         Float?
-  isGood        Boolean?
+  category      String
+  startSec      Float
+  endSec        Float
+  isGood        Boolean
+  scoreAvg      Float?
   note          String?
 
-  createdAt     DateTime @default(now())
+  createdAt     DateTime    @default(now())
 
   @@index([videoUploadId])
   @@index([category])
 }
 
-model VideoUpload {
-  id     String @id @default(cuid())
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  originalName String
-  mimeType     String
-  sizeBytes    Int
-  storageKey   String @unique
-
-  createdAt DateTime @default(now())
-  analysis  Json?
-}
 
 model StoredBehavioralSession {
 	id			String		 @id @default(cuid())
@@ -257,9 +254,73 @@ model StoredBehavioralSession {
 	feedback	Json?
 }
 
+// Job Tracker
+
+
+model JobApplication {
+  id             String            @id @default(cuid())
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company        String
+  position       String
+  jobDescription String?           @db.Text
+  jobUrl         String?
+  salaryMin      Int?
+  salaryMax      Int?
+  location       String?
+  status         ApplicationStatus @default(SAVED)
+  notes          String?           @db.Text
+  appliedAt      DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  statusHistory  StatusHistory[]
+
+  @@index([userId])
+}
+
+model StatusHistory {
+  id               String         @id @default(cuid())
+  jobApplicationId String
+  jobApplication   JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+  fromStatus       String
+  toStatus         String
+  note             String?
+  changedAt        DateTime       @default(now())
+
+  @@index([jobApplicationId])
+}
+
+// Tracks Adzuna job IDs a user has dismissed from the suggestions feed
+// so they do not reappear in future /api/jobs/suggest responses.
+model DismissedJob {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adzunaJobId String
+  dismissedAt DateTime @default(now())
+
+  @@unique([userId, adzunaJobId])
+  @@index([userId])
+}
+
+
 // ============================================
 // Enums
 // ============================================
+
+enum ApplicationStatus {
+  SAVED
+  APPLIED
+  PHONE_SCREEN
+  TECHNICAL
+  ONSITE
+  OFFER
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  GHOSTED
+}
+
 
 enum InterviewType {
   BEHAVIORAL
