@@ -1,7 +1,6 @@
 "use client";
 
 // HistoryTour.tsx
-// Add this component to src/app/history/page.tsx
 
 import { useTour } from "~/components/tutorial-tour/useTour";
 

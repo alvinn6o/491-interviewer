@@ -1,7 +1,6 @@
 "use client";
 
 // TechnicalTour.tsx
-// Add this component to src/app/technical/technicalInterview.tsx
 
 import { useTour } from "~/components/tutorial-tour/useTour";
 

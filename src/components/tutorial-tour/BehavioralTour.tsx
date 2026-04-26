@@ -1,7 +1,6 @@
 "use client";
 
 // BehavioralTour.tsx
-// Add this component to src/app/interview/behavioral/page.tsx
 
 import { useTour } from "~/components/tutorial-tour/useTour";
 

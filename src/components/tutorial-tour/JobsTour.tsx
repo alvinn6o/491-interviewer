@@ -1,7 +1,6 @@
 "use client";
 
 // JobsTour.tsx
-// Add this component to src/app/jobs/page.tsx
 
 import { useTour } from "~/components/tutorial-tour/useTour";
 

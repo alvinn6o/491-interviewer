@@ -1,7 +1,6 @@
 "use client";
 
 // ResumeTour.tsx
-// Add this component to src/app/resume/page.tsx
 
 import { useTour } from "~/components/tutorial-tour/useTour";
 
