@@ -12,6 +12,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Briefcase, Plus, Search, ChevronDown, Trash2, ExternalLink, ArrowUpDown, Sparkles } from "lucide-react";
 import JobSuggestions from "./_components/JobSuggestions";
+import JobsTour from "~/components/tutorial-tour/JobsTour";
 
 // TypeScript type matching the JobApplication Prisma model
 type JobApplication = {
@@ -616,6 +617,7 @@ export default function JobsPage() {
           </div>
           <div className="flex items-center gap-3">
             <a
+              id="tour-suggestions"
               href="#suggestions"
               className="flex items-center gap-2 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
@@ -623,6 +625,7 @@ export default function JobsPage() {
               See Suggestions
             </a>
             <button
+              id="tour-add-job"
               onClick={() => setShowAddModal(true)}
               className="flex items-center gap-2 rounded-full bg-orange-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-orange-600"
             >
@@ -811,6 +814,7 @@ export default function JobsPage() {
       {deletingJob && (
         <DeleteConfirmModal job={deletingJob} onClose={() => setDeletingJob(null)} onDeleted={handleDeleted} />
       )}
+      <JobsTour />
     </main>
   );
 }

@@ -6,7 +6,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import Tutorial from "~/components/Tutorial";
+import Tutorial from "~/components/tutorial-tour/Tutorial";
 
 export default function Home() {
   const { data: session } = useSession();

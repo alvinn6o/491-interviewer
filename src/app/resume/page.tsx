@@ -22,6 +22,7 @@ import {
     HighlightedResumeText,
 } from "./resumeCharts"
 import { fetchOptimizations } from "./optimizerService"
+import ResumeTour from "~/components/tutorial-tour/ResumeTour";
 
 const PdfViewer = lazy(() => import("./PdfViewer"));
 
@@ -45,6 +46,7 @@ export default function ResumeUpload() {
             <Instructions />
             <ViewSwitcher />
             <br />
+            <ResumeTour />
         </main>
 
 
@@ -159,7 +161,7 @@ function UploadBox({ changeState, changeResumeText, changeResumeFileName, change
     };
 
     return (
-        <div className="w-1/2 border border-gray-200 rounded-lg overflow-hidden">
+        <div id="tour-upload-box" className="w-1/2 border border-gray-200 rounded-lg overflow-hidden">
             <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
                 <h2 className="text-gray-900 m-0">Upload Your Resume</h2>
             </div>
@@ -171,7 +173,7 @@ function UploadBox({ changeState, changeResumeText, changeResumeFileName, change
                     <>
                         <div className="flex flex-col items-center gap-3 border-2 border-dashed border-gray-200 rounded-lg w-full py-8 px-4">
                             <span className="text-4xl text-gray-300">↑</span>
-                            <button className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
+                            <button id="tour-upload-btn" className="orange_button" onClick={UploadResumeButton}>Upload Resume</button>
                             <p className="text-gray-400 text-xs m-0">.pdf, .docx, or .txt</p>
                         </div>
 
