@@ -12,26 +12,26 @@ SkillSift is an AI-powered interview and job application prep platform built for
 
 The app depends on several external APIs and services (authentication, database, AI providers, cloud storage) that require private environment variables. Setting these up locally is non-trivial, and the live deployment on Vercel is always up to date.
 
-👉 **[https://www.skillsift.xyz](https://www.skillsift.xyz)**
+--> **[https://www.skillsift.xyz](https://www.skillsift.xyz)**
 
 ---
 
 ## Features
 
 ### Resume Scanner
-Upload your resume and paste a job description. SkillSift runs it through a Workday-style ATS scoring engine that grades your resume across five weighted dimensions — technical skills, experience, education, soft skills, and tools. You get a score, a letter grade, a keyword breakdown showing what's matched and what's missing, and AI-generated suggestions to improve your resume content.
+Upload your resume and paste a job description. SkillSift runs it through a Workday-style ATS scoring engine that grades your resume across five weighted dimensions: technical skills, experience, education, soft skills, and tools. You get a score, a letter grade, a keyword breakdown showing what's matched and what's missing, and AI-generated suggestions to improve your resume content.
 
 ### Behavioral Interview
-Practice mock interviews with an AI interviewer that listens and responds to your answers in real time. A live camera feed records your session, and after each response you receive structured feedback on delivery, content, and the STAR format.
+Practice mock interviews with an AI interviewer that listens and responds to your answers in real time. A live camera feed records your session, and after each response, you receive structured feedback on delivery, content, and the STAR format.
 
 ### Technical Interview
 Work through curated coding and system design questions in a built-in code editor. Get instant AI explanations and hints when you're stuck, and track your progress across sessions.
 
 ### Job Tracker
-Keep all your applications in one place. Log companies, positions, salaries, and job descriptions. Update your application status inline — from Saved all the way to Offer or Rejected — and monitor your overall offer rate at a glance.
+Keep all your applications in one place. Log companies, positions, salaries, and job descriptions. Update your application status inline, and it is saved all the way to Offer or Rejected. You can monitor your overall offer rate at a glance.
 
 ### History
-Review every resume scan and interview session you've completed. All results are stored to your account so you can track improvement over time.
+Review every resume scan and interview session you've completed. All results are stored in your account so you can track improvement over time.
 
 ---
 
