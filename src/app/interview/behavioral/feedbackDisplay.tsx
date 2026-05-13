@@ -39,9 +39,8 @@ function SortFeedbackItems(items: FeedbackItem[]) {
         (item: FeedbackItem) => {
             if (item.score != null) {
                 scoreItems.push(item);
-            }
-
-            if (item.content != null && item.content != "") {
+            } else if (item.content != null && item.content !== "") {
+                // Only show in content section if there's no score — score cards already show content
                 contentItems.push(item);
             }
 
@@ -54,20 +53,52 @@ function SortFeedbackItems(items: FeedbackItem[]) {
     return itemsByType;
 }
 
+const DEFAULT_DESCRIPTIONS: Record<string, string> = {
+    "Word Count":        "Total number of words spoken during the interview.",
+    "Repitition":        "Frequency of repeated words or phrases.",
+    "Word Choice":       "Variety and appropriateness of vocabulary used.",
+    "Volume":            "Consistency and clarity of speaking volume.",
+    "Posture":           "Estimated from body position over time.",
+    "Eye Contact":       "Estimated from face orientation over time.",
+    "Facial Expression": "Estimated from facial engagement over time.",
+};
+
+function scoreDescriptor(score: number): { label: string; color: string } {
+    if (score >= 0.7) return { label: "Good",             color: "text-green-600" };
+    if (score >= 0.4) return { label: "Needs Attention",  color: "text-orange-500" };
+    return              { label: "Needs Improvement",     color: "text-red-500" };
+}
+
 function DisplayScoreFeedback({ items }: { items: FeedbackItem[] }) {
 
     if (items.length == 0)
         return null;
 
+    const visibleItems = items.filter((item) => item.key !== "Volume");
+
     return (
         <DisplayBox title="Statistics">
-            <div className="grid grid-cols-2 gap-3">
-                {items.map((item: FeedbackItem, i) => (
-                    <div key={i} className="flex flex-col gap-0.5 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{item.key}</span>
-                        <span className="text-lg font-bold text-gray-900">{item.score?.toString()}</span>
-                    </div>
-                ))}
+            <div className="flex flex-col gap-2">
+                {visibleItems.map((item: FeedbackItem, i) => {
+                    const { label, color } = scoreDescriptor(item.score ?? 0);
+                    const description = item.content ?? DEFAULT_DESCRIPTIONS[item.key] ?? "";
+                    return (
+                        <div key={i} className="flex items-center gap-4 rounded-lg bg-gray-50 border border-gray-100 px-4 py-3">
+                            <div className="flex-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-semibold text-gray-800">{item.key}:</span>
+                                    <span className={`text-sm font-medium ${color}`}>{label}</span>
+                                </div>
+                                {description && (
+                                    <p className="text-xs text-gray-500 m-0 mt-0.5">{description}</p>
+                                )}
+                            </div>
+                            <span className="text-sm font-bold text-orange-500 shrink-0">
+                                {(item.score ?? 0).toFixed(2)}
+                            </span>
+                        </div>
+                    );
+                })}
             </div>
         </DisplayBox>
     );

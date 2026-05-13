@@ -17,15 +17,33 @@ import { CombineFeedback } from "./feedbackItem";
 import { AnalysisResultToFBItems, CreateFeedbackItem } from "./feedbackItem";
 import type { AnalysisResponse, VolumeAnalysisResponse, FillerAnalysisResponse, BasicAnalysisResponse } from "../../api/behavioral/analyze/analysisResponse";
 
+type RawVideoAnalysis = {
+    video?: { sample_fps?: number; sampled_frames?: number };
+    posture?: { valid_frames?: number; good_frames?: number; good_percent?: number | null };
+    eye_contact?: { valid_frames?: number; good_frames?: number; good_percent?: number | null };
+    facial_expression?: { valid_frames?: number; good_frames?: number; good_percent?: number | null };
+    summary?: { notes?: string[] };
+    segments?: Array<{
+        id?: string;
+        category: string;
+        startSec: number;
+        endSec: number;
+        isGood: boolean;
+        scoreAvg?: number | null;
+        note?: string | null;
+        createdAt?: string;
+    }>;
+    error?: string;
+};
+
 //Wrapper function to simplify calls to behavioral service
 export async function SendAudioVideoToServer(sessionId: string, audioData: Blob, videoData: Blob) {
 
-    const audioAnalysisResponse = await SendToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
-    const videoAnalysisResponse = await SendVideoSessionId(sessionId, "/api/behavioral/uploadVideo");
+    const audioAnalysisResponse = await SendBlobToServer(sessionId, audioData, "/api/behavioral/uploadAudio", "audio");
+    const videoFeedback = await AnalyzeVideo(sessionId, videoData);
 
     const audioFeedback = await AudioAnalysisToFBItem(audioAnalysisResponse);
-    const videoFeedback = await VideoAnalysisToFBItem(videoAnalysisResponse);
-    const allFeedback = CombineFeedback(audioFeedback, videoFeedback);
+    const allFeedback = CombineFeedback(audioFeedback, videoFeedback.feedback);
 
     const formData = new FormData();
 
@@ -41,9 +59,13 @@ export async function SendAudioVideoToServer(sessionId: string, audioData: Blob,
     });
 
     //return the data to the user
-    return allFeedback;
+    return {
+        allFeedback,
+        rawVideoAnalysis: videoFeedback.rawAnalysis ?? null
+    };
 }
 
+// Audio API returns { volumeAnalysis, fillerAnalysis, wordCountAnalysis } — parse each sub-array explicitly
 async function AudioAnalysisToFBItem(audioAnalysisResponse: Response) {
     const audioAnalysisData: AnalysisResponse = await audioAnalysisResponse.json();
 
@@ -63,29 +85,81 @@ async function AudioAnalysisToFBItem(audioAnalysisResponse: Response) {
         JSON.stringify(wordcountData.feedbackItems)
     );
 
-    const ab = CombineFeedback(volumeFBItems, fillerFBItems);
-    const bc = CombineFeedback(ab, wordCountFBItems);
-
-    return bc;
+    return CombineFeedback(CombineFeedback(volumeFBItems, fillerFBItems), wordCountFBItems);
 }
 
-async function VideoAnalysisToFBItem(videoAnalysisResponse: Response) {
-    const videoResponseData = await videoAnalysisResponse.json();
-    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(videoResponseData));
+function scoreFromSegments(rawAnalysis: RawVideoAnalysis, category: string): number {
+    // Categories are top-level keys (posture, eye_contact, facial_expression), NOT under summary.
+    // good_percent is 0–100; divide by 100 for the 0–1 scale scoreDescriptor expects.
+    const catData = (rawAnalysis as any)[category];
+    const goodPercent = catData?.good_percent;
+    if (typeof goodPercent === "number") return goodPercent / 100;
 
-    return fbItems;
+    const segments: any[] = (rawAnalysis as any).segments ?? [];
+    const cat = segments.filter((s: any) => s.category === category);
+    if (cat.length === 0) return 0;
+
+    const totalDur = cat.reduce((sum: number, s: any) => sum + ((s.endSec ?? 0) - (s.startSec ?? 0)), 0);
+    if (totalDur > 0) {
+        const goodDur = cat.filter((s: any) => s.isGood).reduce((sum: number, s: any) => sum + ((s.endSec ?? 0) - (s.startSec ?? 0)), 0);
+        return goodDur / totalDur;
+    }
+    return cat.filter((s: any) => s.isGood).length / cat.length;
 }
 
-async function SendVideoSessionId(sessionId: string, apiURL: string) {
-    const formData = new FormData();
-    formData.append("sessionId", sessionId);
-    const response = await fetch(apiURL, { method: "POST", body: formData });
-    return response;
+// Step 1: Fetch Railway URL + secret from auth-gated Vercel endpoint (stays server-side)
+// Step 2: POST video blob directly to Railway (bypasses Vercel payload limit)
+// Step 3: POST raw JSON to thin Vercel route for DB averaging + transformation
+async function AnalyzeVideo(sessionId: string, videoData: Blob) {
+    const configResponse = await fetch("/api/behavioral/videoAnalysisConfig");
+    if (!configResponse.ok) throw new Error("Could not fetch video analyzer config");
+    const { url: analyzerUrl, secret } = await configResponse.json() as { url: string; secret: string };
+
+    const videoForm = new FormData();
+    videoForm.append("video", videoData);
+
+    const headers: Record<string, string> = {};
+    if (secret) headers["X-Analyzer-Secret"] = secret;
+
+    const railwayResponse = await fetch(`${analyzerUrl}/analyze-video`, {
+        method: "POST",
+        body: videoForm,
+        headers,
+    });
+
+    if (!railwayResponse.ok) {
+        throw new Error(`Video analysis failed: ${railwayResponse.status}`);
+    }
+
+    const rawAnalysis: RawVideoAnalysis = await railwayResponse.json();
+
+    // Compute scores client-side directly from the segments we know are present
+    const baseItems = [
+        { category: "Posture",            content: "Estimated from body position over time.",       score: scoreFromSegments(rawAnalysis, "posture") },
+        { category: "Eye Contact",        content: "Estimated from face orientation over time.",    score: scoreFromSegments(rawAnalysis, "eye_contact") },
+        { category: "Facial Expression",  content: "Estimated from facial engagement over time.",   score: scoreFromSegments(rawAnalysis, "facial_expression") },
+    ];
+
+    const processResponse = await fetch("/api/behavioral/processVideoFeedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ baseItems, sessionId }),
+    });
+
+    if (!processResponse.ok) {
+        throw new Error(`Video feedback processing failed: ${processResponse.status}`);
+    }
+
+    const processed = await processResponse.json();
+    const fbItems: FeedbackItem[] = AnalysisResultToFBItems(JSON.stringify(processed.feedback));
+
+    return {
+        feedback: fbItems,
+        rawAnalysis,
+    };
 }
 
-async function SendToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
-    //Attach data to form data
-    //in order to send it to the api
+async function SendBlobToServer(sessionId: string, data: Blob, apiURL: string, formDataKey: string) {
     console.log("Send blob to " + apiURL);
 
     const formData = new FormData();
@@ -100,7 +174,6 @@ async function SendToServer(sessionId: string, data: Blob, apiURL: string, formD
         sessionId
     );
 
-    //obtain json analysis of the feedback data
     const response = await fetch(apiURL, {
         method: "POST",
         body: formData
